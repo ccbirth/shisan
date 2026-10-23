@@ -175,7 +175,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
   <div class="card">
     <h2>残高の推移</h2>
     <div id="monChart"></div>
-    <div class="legend"><span><i style="background:var(--sub)"></i>計画（予算どおりに減る線）</span><span><i style="background:var(--c-cash)"></i>実際の残高</span></div>
+    <div class="legend"><span><i style="background:var(--sub)"></i>計画（予算どおりに減る線）</span><span><i style="background:var(--c-cash)"></i>生活に使える残高</span></div>
   </div>
 
   <div class="card">
@@ -186,7 +186,8 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="row"><label for="r_tip">投げ銭（受け取った額）</label><div class="in"><input type="number" inputmode="decimal" id="r_tip"><span class="unit">万円</span></div></div>
     <div class="row"><label for="r_fee">投げ銭の手数料など</label><div class="in"><input type="number" inputmode="decimal" id="r_fee"><span class="unit">万円</span></div></div>
     <div class="row"><label for="r_inc">ほかに入ったお金</label><div class="in"><input type="number" inputmode="decimal" id="r_inc"><span class="unit">万円</span></div></div>
-    <p class="note">ほかに入ったお金は、年金・国債の利子や償還・NISAからの取り崩しなど、生活費以外で口座に入った額。使った額＝前の月の残高＋バイト代＋投げ銭（手数料を引いた額）＋ほかに入ったお金－今月の残高で出します。投げ銭は、手数料が引かれる前の額と、引かれた手数料を分けて入れます。</p>
+    <div class="row"><label for="r_tr">投資に回した額（振替）</label><div class="in"><input type="number" inputmode="decimal" id="r_tr"><span class="unit">万円</span></div></div>
+    <p class="note">ほかに入ったお金は、年金・国債の利子や償還・NISAからの取り崩しなど、生活費以外で口座に入った額。投資に回した額は、この口座からNISAの買い付けや国債の購入に回した額。使った額＝前の月の残高＋バイト代＋投げ銭（手数料を引いた額）＋ほかに入ったお金－投資に回した額－今月の残高で出します。投げ銭は、手数料が引かれる前の額と、引かれた手数料を分けて入れます。</p>
     <div class="btns"><button class="primary" id="r_add">記録する</button></div>
   </div>
 
@@ -204,6 +205,9 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <summary>見張りの設定</summary>
     <div class="row"><label for="m_start">始める月</label><div class="in"><input type="month" id="m_start" data-m="start"></div></div>
     <div class="row"><label for="m_bal">始める月の初めの残高</label><div class="in"><input type="number" inputmode="decimal" id="m_bal" data-m="bal"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="m_inv">そのうち、これから投資に回す額</label><div class="in"><input type="number" inputmode="decimal" id="m_inv" data-m="inv"><span class="unit">万円</span></div></div>
+    <div class="btns"><button class="small" id="m_invFromSim">試算の額を反映</button></div>
+    <p class="note" id="m_invNote">試算の「これから現金から入れる額」を入れます。見張りの始める月が試算より後なら、それまでに移した分を引き、見張る口座から国債を買う予定があれば足してください。生活に使える残高は「銀行の残高－まだ投資に回していない額」で出します。</p>
     <div class="row"><label for="m_end">この残高で持たせる月</label><div class="in"><input type="month" id="m_end" data-m="end"></div></div>
     <p class="note">始める月から持たせる月まで、残高を均等に使う前提で毎月使える額を出します。持たせる月は、国債の償還月などにします。</p>
     <h3>予算とバイト</h3>
@@ -275,7 +279,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 
 <script>
 "use strict";
-const APP_VER = "1.1（オフライン版）";
+const APP_VER = "1.2（オフライン版）";
 const KEY = "shisan-v1";
 /* この端末だけで書き出す（共有シート→「ファイル」に保存、だめならダウンロード） */
 const LOCAL_DL = {save: async ({filename, data})=>{
@@ -304,7 +308,7 @@ const DEF_SIM = {
   ],
   exp:"", exp2Age:"", exp2:"", infl:0, bondFirst:false
 };
-const DEF_MON = {start:"", bal:"", end:"", budget:"", shift:"", kyuyo:74, shotoku:104, jumin:45};
+const DEF_MON = {inv:"", start:"", bal:"", end:"", budget:"", shift:"", kyuyo:74, shotoku:104, jumin:45};
 
 /* ---------- 保存 ---------- */
 let S = load();
@@ -556,26 +560,30 @@ function stackChart(r){
 
 /* ---------- 見張り ---------- */
 function monitor(){
-  const st = ymToIdx(S.mon.start), en = ymToIdx(S.mon.end), bal0 = num(S.mon.bal);
+  const st = ymToIdx(S.mon.start), en = ymToIdx(S.mon.end), bank0 = num(S.mon.bal);
   if (st===null || en===null || en<st || !has(S.mon.bal)) return {err:true};
+  const inv0 = Math.max(0, num(S.mon.inv));       // これから投資に回す予定の額
+  const bal0 = bank0 - inv0;                      // 生活に使える残高（始める月）
   const span = en - st + 1;                      // 使う月数
   const even = bal0/span;                         // 残高を均等に割った額
   const plan = has(S.mon.budget) && num(S.mon.budget)>0 ? num(S.mon.budget) : even;
   const usingBudget = plan !== even;
   const shift = num(S.mon.shift) > 0 ? num(S.mon.shift) : 0;
   const recs = S.recs.slice().sort((a,b)=>a.ym<b.ym?-1:1);
-  const rows = []; let prevBal = bal0, prevIdx = st-1;
+  const rows = []; let prevBal = bank0, prevIdx = st-1, trSum = 0;
   for (const rc of recs){
     const i = ymToIdx(rc.ym); if (i===null) continue;
     const gap = Math.max(1, i - prevIdx);
-    const job = num(rc.job), tip = num(rc.tip), fee = num(rc.fee), tipNet = tip - fee;
-    const spent = prevBal + num(rc.inc) + job + tipNet - num(rc.bal);
+    const job = num(rc.job), tip = num(rc.tip), fee = num(rc.fee), tipNet = tip - fee, tr = num(rc.tr);
+    const spent = prevBal + num(rc.inc) + job + tipNet - tr - num(rc.bal);
+    trSum += tr;
+    const live = num(rc.bal) - Math.max(0, inv0 - trSum);   // 生活に使える残高
     const over = spent - plan*gap;                // 予算からのはみ出し（マイナスは余り）
     const earned = job + tipNet;                  // はみ出しを埋める稼ぎ
-    rows.push({...rc, i, spent, gap, job, tip, fee, tipNet, earned, over, short: over - earned});
+    rows.push({...rc, i, spent, gap, job, tip, fee, tipNet, tr, live, earned, over, short: over - earned});
     prevBal = num(rc.bal); prevIdx = i;
   }
-  return {st, en, span, plan, even, usingBudget, shift, bal0, rows};
+  return {st, en, span, plan, even, usingBudget, shift, bal0, inv0, rows};
 }
 
 function renderMon(){
@@ -606,12 +614,13 @@ function renderMon(){
     const remain = m.en - last.i;
     h += `<div><div class="k">これまでの平均（${monthsPassed}か月）</div><div class="big ${avg>m.plan?"ng":"ok"}">${man(avg,1)}万円／月</div><div>計画より ${avg>m.plan?"多い":"少ない"}：${man(Math.abs(avg-m.plan),1)}万円／月</div></div>`;
     if (remain>0){
-      const canUse = num(last.bal)/remain;
-      const proj = num(last.bal) - avg*remain;
+      const canUse = last.live/remain;
+      const proj = last.live - avg*remain;
+      if (m.inv0>0) h += `<div><div class="k">生活に使える残高（銀行の残高－まだ投資に回していない額）</div><div class="big">${man(last.live,1)}万円</div><div>投資に回した額の累計 ${man(m.rows.reduce((s,r)=>s+r.tr,0),1)}万円／予定 ${man(m.inv0,1)}万円</div></div>`;
       h += `<div><div class="k">今の残高で、あと${remain}か月に毎月使える額</div><div class="big">${man(canUse,1)}万円</div></div>`;
       h += `<div><div class="k">このペースが続くと、${jYm(m.en)}の時点で</div><div class="big ${proj<0?"ng":"ok"}">${proj<0?"不足 "+man(-proj)+"万円":"残り "+man(proj)+"万円"}</div></div>`;
     } else {
-      h += `<div><div class="k">${jYm(m.en)}の時点の残高</div><div class="big">${man(num(last.bal))}万円</div></div>`;
+      h += `<div><div class="k">${jYm(m.en)}の時点の生活に使える残高</div><div class="big">${man(last.live)}万円</div></div>`;
     }
   } else {
     h += `<div><p class="note">月末の残高を記録すると、計画との比較が出ます。</p></div>`;
@@ -644,7 +653,7 @@ function renderTax(m){
 
 function monChart(m){
   const W=360, H=210, L=44, R=6, T=10, B=28;
-  const vals = [m.bal0, ...m.rows.map(r=>num(r.bal))];
+  const vals = [m.bal0, ...m.rows.map(r=>r.live)];
   const maxV = niceMax(Math.max(...vals, 1));
   const x = i => L + (i-(m.st-1))/(Math.max(1, m.en-(m.st-1)))*(W-L-R);
   const y = v => T + (1-Math.max(0,v)/maxV)*(H-T-B);
@@ -659,7 +668,7 @@ function monChart(m){
     g += `<text x="${xx}" y="${H-B+19}" text-anchor="middle" font-size="12" fill="var(--sub)">${Math.floor(i/12)}</text>`;
     g += `<line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${H-B+5}" stroke="var(--sub)"/>`; }
   if (m.rows.length){
-    const pts = [[m.st-1, m.bal0], ...m.rows.map(r=>[r.i, num(r.bal)])];
+    const pts = [[m.st-1, m.bal0], ...m.rows.map(r=>[r.i, r.live])];
     g += `<polyline points="${pts.map(p=>`${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--c-cash)" stroke-width="3"/>`;
     for (const p of pts) g += `<circle cx="${x(p[0]).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="4" fill="var(--c-cash)"/>`;
   }
@@ -674,7 +683,7 @@ function renderRecs(m){
   list.innerHTML = sorted.map(rc=>{
     const r = map[rc.ym], i = ymToIdx(rc.ym);
     const sp = r ? `使った額 ${man(r.spent,1)}万円${r.gap>1?`（${r.gap}か月分）`:""}　予算との差 ${r.over>=0?"+":"−"}${man(Math.abs(r.over),1)}万円` : "";
-    return `<div class="rec"><div><div class="m">${i!==null?jYm(i):esc(rc.ym)}　残高 ${man(num(rc.bal),1)}万円</div><div class="d">${num(rc.job)?`バイト代 ${man(num(rc.job),1)}万円　`:""}${num(rc.tip)?`投げ銭 ${man(num(rc.tip),1)}万円（手数料 ${man(num(rc.fee),1)}万円）　`:""}${num(rc.inc)?`ほかに入ったお金 ${man(num(rc.inc),1)}万円　`:""}${sp}</div></div><button class="small" data-del="${esc(rc.ym)}">削除</button></div>`;
+    return `<div class="rec"><div><div class="m">${i!==null?jYm(i):esc(rc.ym)}　残高 ${man(num(rc.bal),1)}万円</div><div class="d">${num(rc.job)?`バイト代 ${man(num(rc.job),1)}万円　`:""}${num(rc.tip)?`投げ銭 ${man(num(rc.tip),1)}万円（手数料 ${man(num(rc.fee),1)}万円）　`:""}${num(rc.inc)?`ほかに入ったお金 ${man(num(rc.inc),1)}万円　`:""}${num(rc.tr)?`投資に回した額 ${man(num(rc.tr),1)}万円　`:""}${sp}</div></div><button class="small" data-del="${esc(rc.ym)}">削除</button></div>`;
   }).join("");
 }
 
@@ -736,16 +745,21 @@ function defaultRecYm(){
   const d = new Date(); return idxToYm(d.getFullYear()*12+d.getMonth());
 }
 $("#r_add").addEventListener("click", ()=>{
-  const ym = $("#r_ym").value, bal = $("#r_bal").value, inc = $("#r_inc").value, job = $("#r_job").value, tip = $("#r_tip").value, fee = $("#r_fee").value;
+  const ym = $("#r_ym").value, bal = $("#r_bal").value, inc = $("#r_inc").value, job = $("#r_job").value, tip = $("#r_tip").value, fee = $("#r_fee").value, tr = $("#r_tr").value;
   if (ymToIdx(ym)===null){ toast("年月を入れてください"); return; }
   if (!has(bal)){ toast("月末の残高を入れてください"); return; }
   const st = ymToIdx(S.mon.start);
   if (st!==null && ymToIdx(ym) < st){ toast("始める月より前の月です"); return; }
   const k = S.recs.findIndex(r=>r.ym===ym);
-  const rec = {ym, bal:num(bal), inc: has(inc)?num(inc):0, job: has(job)?num(job):0, tip: has(tip)?num(tip):0, fee: has(fee)?num(fee):0};
+  const rec = {ym, bal:num(bal), inc: has(inc)?num(inc):0, job: has(job)?num(job):0, tip: has(tip)?num(tip):0, fee: has(fee)?num(fee):0, tr: has(tr)?num(tr):0};
   if (k>=0) S.recs[k] = rec; else S.recs.push(rec);
-  save(); $("#r_bal").value=""; $("#r_inc").value=""; $("#r_job").value=""; $("#r_tip").value=""; $("#r_fee").value=""; $("#r_ym").value = defaultRecYm();
+  save(); $("#r_bal").value=""; $("#r_inc").value=""; $("#r_job").value=""; $("#r_tip").value=""; $("#r_fee").value=""; $("#r_tr").value=""; $("#r_ym").value = defaultRecYm();
   renderMon(); toast(k>=0 ? "上書きしました" : "記録しました");
+});
+$("#m_invFromSim").addEventListener("click", ()=>{
+  const v = S.sim.nisaAdd;
+  if (!has(v)){ toast("試算の「これから現金から入れる額」が空です"); return; }
+  S.mon.inv = String(num(v)); $("#m_inv").value = S.mon.inv; save(); renderMon(); toast(`${man(num(v),1)}万円を反映しました`);
 });
 $("#recList").addEventListener("click", e=>{
   const btn = e.target.closest("button[data-del]"); if (!btn) return;
