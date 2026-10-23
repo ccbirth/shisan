@@ -1,0 +1,1019 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>資産の見通し</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="資産の見通し"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#1f5f8b"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>資産の見通し</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 縦一列の帳面：結果→グラフ→入力。下にタブ */
+:root{
+  --bg:#eef1f3; --card:#ffffff; --ink:#1b2126; --sub:#56616b; --line:#d3dae0;
+  --accent:#1f5f8b; --accent-ink:#ffffff; --good:#2e7d4f; --warn:#b4532a;
+  --c-cash:#2f7fb5; --c-bond:#c99a2e; --c-nisa:#3a9a6a; --field:#f8fafb;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15191c; --card:#1e2428; --ink:#e8ecee; --sub:#a3adb5; --line:#333c43;
+    --accent:#6fb0de; --accent-ink:#0f1a22; --good:#6cc794; --warn:#f0956a;
+    --c-cash:#5aa8de; --c-bond:#e2b94f; --c-nisa:#5cc28d; --field:#252c31; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15191c; --card:#1e2428; --ink:#e8ecee; --sub:#a3adb5; --line:#333c43;
+  --accent:#6fb0de; --accent-ink:#0f1a22; --good:#6cc794; --warn:#f0956a;
+  --c-cash:#5aa8de; --c-bond:#e2b94f; --c-nisa:#5cc28d; --field:#252c31; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  font-size:18px;line-height:1.6;
+  padding-block:0 calc(80px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));}
+header{padding-block:18px 6px;max-width:720px;margin:0 auto}
+header h1{font-size:24px;margin:0;letter-spacing:.02em}
+header p{margin:2px 0 0;color:var(--sub);font-size:15px}
+main{max-width:720px;margin:0 auto}
+section.tab{display:none}
+section.tab.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.card h2{font-size:19px;margin:0 0 10px}
+.card h3{font-size:17px;margin:14px 0 6px;color:var(--sub)}
+details.card>summary{font-weight:700;font-size:19px;cursor:pointer;list-style:none}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"＋";float:right;color:var(--sub)}
+details.card[open]>summary::after{content:"－"}
+details.card[open]>summary{margin-bottom:10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.row:last-child{border-bottom:0}
+.row label{flex:1;font-size:17px}
+.row .in{display:flex;align-items:center;gap:6px}
+.row .unit{color:var(--sub);font-size:15px;min-width:2em}
+input[type=number],input[type=month],input[type=text]{
+  font:inherit;font-size:18px;width:6.4em;padding:8px 10px;border-radius:10px;
+  border:1px solid var(--line);background:var(--field);color:var(--ink);text-align:right}
+input[type=month]{width:8.6em;text-align:left;font-size:17px}
+input[type=checkbox]{width:24px;height:24px}
+textarea{display:block;width:100%;font:14px/1.5 ui-monospace,Menlo,monospace;padding:10px;border-radius:10px;
+  border:1px solid var(--line);background:var(--field);color:var(--ink);resize:vertical;margin-top:8px}
+.note{color:var(--sub);font-size:15px;margin:6px 0 0}
+.big{font-size:22px;font-weight:700;margin:2px 0}
+.kv{display:grid;grid-template-columns:1fr;gap:10px}
+.kv .k{color:var(--sub);font-size:15px}
+.ok{color:var(--good)} .ng{color:var(--warn)}
+button{font:inherit;font-size:18px;border-radius:12px;padding:11px 16px;border:1px solid var(--line);
+  background:var(--field);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+button.small{font-size:15px;padding:6px 10px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.armed{background:var(--warn);border-color:var(--warn);color:var(--accent-ink)}
+.status{font-size:15px;color:var(--sub);margin:4px 0 0}
+.items{display:grid;gap:10px}
+.item{border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--field)}
+.item .head{display:flex;gap:8px;align-items:center;padding:4px 0}
+.item .head input{flex:1;min-width:0;width:auto;text-align:left;font-weight:700;background:var(--card)}
+.item .row input{background:var(--card)}
+.item .row input[type=number]{width:5.2em}
+.item .row input[type=month]{width:7.6em;font-size:16px;padding:8px 6px}
+.item .row label{font-size:16px}
+.row label{min-width:0}
+.row .in{flex-shrink:0}
+.item{padding:6px 10px;min-width:0}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--sub);font-weight:600}
+th:first-child,td:first-child{text-align:left}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:15px;color:var(--sub);margin:6px 0 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+svg text{font-family:inherit}
+nav.bar{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));z-index:5}
+nav.bar button{flex:1;border:0;border-radius:0;background:transparent;padding:14px 0;font-size:17px;color:var(--sub)}
+nav.bar button.on{color:var(--accent);font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:16px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:.95}
+.recs .rec{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:16px}
+.recs .rec:last-child{border-bottom:0}
+.recs .rec .m{font-weight:700}
+.recs .rec .d{color:var(--sub);font-size:14px}
+</style>
+<header>
+  <h1>資産の見通し</h1>
+  <p id="subtitle">取り崩しの試算と生活費の見張り</p>
+</header>
+
+<main>
+<!-- ============ 試算 ============ -->
+<section class="tab on" id="tab-sim">
+  <div class="card" id="simResult"></div>
+
+  <div class="card">
+    <h2>資産の推移</h2>
+    <div id="simChart"></div>
+    <div class="legend"><span><i style="background:var(--c-cash)"></i>現金</span><span><i style="background:var(--c-bond)"></i>国債</span><span><i style="background:var(--c-nisa)"></i>NISA</span></div>
+  </div>
+
+  <details class="card" open>
+    <summary>前提</summary>
+    <div class="row"><label for="s_birth">生まれた年月</label><div class="in"><input type="month" id="s_birth" data-k="birth"></div></div>
+    <div class="row"><label for="s_start">試算を始める月</label><div class="in"><input type="month" id="s_start" data-k="start"></div></div>
+    <div class="row"><label for="s_endAge">試算の終わり</label><div class="in"><input type="number" inputmode="numeric" id="s_endAge" data-k="endAge"><span class="unit">歳</span></div></div>
+  </details>
+
+  <details class="card" open>
+    <summary>始める月の資産</summary>
+    <div class="row"><label for="s_cash">現金（銀行）</label><div class="in"><input type="number" inputmode="decimal" id="s_cash" data-k="cash"><span class="unit">万円</span></div></div>
+    <h3>国債</h3>
+    <div id="bondList" class="items"></div>
+    <div class="btns"><button class="small" id="addBond">国債を足す</button></div>
+    <p class="note">額は始める月の時点の額（外国債券は円に直した額）。利率は税引後。満期の月に額が現金に戻ります。満期が空欄なら試算の終わりまで持ちます。</p>
+    <h3>NISA</h3>
+    <div class="row"><label for="s_nisa">評価額</label><div class="in"><input type="number" inputmode="decimal" id="s_nisa" data-k="nisa"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_nisaRet">想定利回り（年）</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="s_nisaRet" data-k="nisaRet"><span class="unit">%</span></div></div>
+    <div class="row"><label for="s_nisaAdd">これから現金から入れる額</label><div class="in"><input type="number" inputmode="decimal" id="s_nisaAdd" data-k="nisaAdd"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_nisaAddEnd">入れ終わる月</label><div class="in"><input type="month" id="s_nisaAddEnd" data-k="nisaAddEnd"></div></div>
+    <p class="note">入れる額は、始める月から入れ終わる月まで毎月均等に現金からNISAへ移します。</p>
+    <div class="row" style="border-top:2px solid var(--line);border-bottom:0;margin-top:8px;padding-top:10px"><label style="font-weight:700">合計</label><div class="in"><span class="big" id="s_total">0</span><span class="unit">万円</span></div></div>
+    <p class="note" id="s_totalSub"></p>
+  </details>
+
+  <details class="card" open>
+    <summary>収入と支出（年額）</summary>
+    <h3>公的年金</h3>
+    <div class="row"><label for="s_penAge">受け取り開始</label><div class="in"><input type="number" inputmode="numeric" id="s_penAge" data-k="penAge"><span class="unit">歳</span></div></div>
+    <div class="row"><label for="s_pen">年額（手取り）</label><div class="in"><input type="number" inputmode="decimal" id="s_pen" data-k="pen"><span class="unit">万円</span></div></div>
+    <h3>個人年金・その他の収入</h3>
+    <div id="incList" class="items"></div>
+    <div class="btns"><button class="small" id="addInc">収入を足す</button></div>
+    <p class="note">年額を、受け取り始める月から終わる月まで毎月に分けて現金に入れます。</p>
+    <h3>生活費</h3>
+    <div class="row"><label for="s_exp">年間の生活費</label><div class="in"><input type="number" inputmode="decimal" id="s_exp" data-k="exp"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_exp2Age">何歳から変える</label><div class="in"><input type="number" inputmode="numeric" id="s_exp2Age" data-k="exp2Age"><span class="unit">歳</span></div></div>
+    <div class="row"><label for="s_exp2">変えた後の年額</label><div class="in"><input type="number" inputmode="decimal" id="s_exp2" data-k="exp2"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_infl">物価上昇（年）</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="s_infl" data-k="infl"><span class="unit">%</span></div></div>
+    <p class="note">生活費の変更は、空欄なら変えずに続けます。</p>
+  </details>
+
+  <details class="card">
+    <summary>現金が足りない時の崩し方</summary>
+    <div class="row"><label for="s_bondFirst">NISAより先に国債を崩す</label><div class="in"><input type="checkbox" id="s_bondFirst" data-k="bondFirst"></div></div>
+    <p class="note">オフなら、国債は満期まで持ち、償還金を現金に入れます。現金が尽きたらNISAから取り崩します。オンなら、国債を上に並んでいる順に崩します。</p>
+  </details>
+
+  <div class="card">
+    <h2>年ごとの残高（年末）</h2>
+    <div class="scroll" id="simTable"></div>
+    <p class="note">単位は万円。取り崩しはその年にNISA・国債から現金不足を埋めた額。</p>
+  </div>
+</section>
+
+<!-- ============ 見張り ============ -->
+<section class="tab" id="tab-mon">
+  <div class="card" id="monResult"></div>
+
+  <div class="card">
+    <h2>残高の推移</h2>
+    <div id="monChart"></div>
+    <div class="legend"><span><i style="background:var(--sub)"></i>計画（予算どおりに減る線）</span><span><i style="background:var(--c-cash)"></i>実際の残高</span></div>
+  </div>
+
+  <div class="card">
+    <h2>月末の記録をつける</h2>
+    <div class="row"><label for="r_ym">年月</label><div class="in"><input type="month" id="r_ym"></div></div>
+    <div class="row"><label for="r_bal">月末の銀行残高</label><div class="in"><input type="number" inputmode="decimal" id="r_bal"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="r_job">その月のバイト代</label><div class="in"><input type="number" inputmode="decimal" id="r_job"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="r_tip">投げ銭（受け取った額）</label><div class="in"><input type="number" inputmode="decimal" id="r_tip"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="r_fee">投げ銭の手数料など</label><div class="in"><input type="number" inputmode="decimal" id="r_fee"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="r_inc">ほかに入ったお金</label><div class="in"><input type="number" inputmode="decimal" id="r_inc"><span class="unit">万円</span></div></div>
+    <p class="note">ほかに入ったお金は、年金・国債の利子や償還・NISAからの取り崩しなど、生活費以外で口座に入った額。使った額＝前の月の残高＋バイト代＋投げ銭（手数料を引いた額）＋ほかに入ったお金－今月の残高で出します。投げ銭は、手数料が引かれる前の額と、引かれた手数料を分けて入れます。</p>
+    <div class="btns"><button class="primary" id="r_add">記録する</button></div>
+  </div>
+
+  <div class="card">
+    <h2>記録</h2>
+    <div class="recs" id="recList"></div>
+  </div>
+
+  <div class="card">
+    <h2>税の申告の目安</h2>
+    <div id="taxBox"></div>
+  </div>
+
+  <details class="card" id="monSet">
+    <summary>見張りの設定</summary>
+    <div class="row"><label for="m_start">始める月</label><div class="in"><input type="month" id="m_start" data-m="start"></div></div>
+    <div class="row"><label for="m_bal">始める月の初めの残高</label><div class="in"><input type="number" inputmode="decimal" id="m_bal" data-m="bal"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="m_end">この残高で持たせる月</label><div class="in"><input type="month" id="m_end" data-m="end"></div></div>
+    <p class="note">始める月から持たせる月まで、残高を均等に使う前提で毎月使える額を出します。持たせる月は、国債の償還月などにします。</p>
+    <h3>予算とバイト</h3>
+    <div class="row"><label for="m_budget">月の予算（空欄なら上の割り算）</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_budget" data-m="budget"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="m_shift">バイト1回の稼ぎ</label><div class="in"><input type="number" inputmode="decimal" step="0.01" id="m_shift" data-m="shift"><span class="unit">万円</span></div></div>
+    <h3>税の基準（毎年確かめて入れ直す）</h3>
+    <div class="row"><label for="m_kyuyo">給与所得控除の最低額</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_kyuyo" data-m="kyuyo"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="m_shotoku">所得税の確定申告が要る所得</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_shotoku" data-m="shotoku"><span class="unit">万円超</span></div></div>
+    <div class="row"><label for="m_jumin">住民税が非課税になる所得</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_jumin" data-m="jumin"><span class="unit">万円以下</span></div></div>
+    <p class="note">初期値は2026年分の所得税（給与所得控除74万円・基礎控除104万円）と、住民税の非課税基準の一例（45万円）です。住民税の基準は住んでいる市区町村で確かめて入れ直してください。</p>
+    <p class="note">予算を超えて使った分を「はみ出し」とし、バイト代で埋めた残りを、バイト1回の稼ぎで割って「あと何回」で出します。たとえば4時間・時給1,200円なら0.48万円です。</p>
+  </details>
+</section>
+
+<!-- ============ データ ============ -->
+<section class="tab" id="tab-data">
+  <div class="card">
+    <h2>データの書き出し</h2>
+    <p>控えが欲しいときは、ファイルに書き出して保存できます。</p>
+    <p class="status" id="saveState">保存先を確認しています…</p>
+    <p class="big" id="lastExp"></p>
+    <div class="btns"><button class="primary" id="d_exp">書き出す</button></div>
+  </div>
+  <div class="card">
+    <h2>計算結果の書き出し</h2>
+    <p>試算の結果を、今の入力のまま書き出します。</p>
+    <div class="btns">
+      <button id="x_csv">CSV（年ごとの表）</button>
+      <button id="x_xlsx">Excel（要約と表）</button>
+      <button id="x_pdf">PDF（結果・グラフ・表）</button>
+    </div>
+    <p class="status" id="xState" hidden></p>
+  </div>
+  <div class="card">
+    <h2>データの読み込み</h2>
+    <p>書き出したファイルを読み込むと、今の入力と記録はファイルの内容で置き換わります。</p>
+    <p class="status" id="impState" hidden></p>
+    <div class="btns"><button id="d_imp">ファイルを選ぶ</button></div>
+    <input type="file" id="d_file" accept=".json,application/json" hidden>
+    <div class="btns" id="impConfirm" hidden><button class="primary" id="d_impYes">置き換える</button><button id="d_impNo">やめる</button></div>
+  </div>
+  <div class="card">
+    <h2>文字で控える・戻す</h2>
+    <p>ファイルの書き出しが使えない画面でも使える方法です。「控えを出す」で下の欄に中身が文字で出るので、コピーしてチャットやメモに貼って残します。戻すときは、残しておいた文字を欄に貼って「この文字から戻す」を押します。</p>
+    <textarea id="t_box" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="ここに控えの文字が出ます。戻すときはここに貼ります。"></textarea>
+    <p class="status" id="t_state" hidden></p>
+    <div class="btns">
+      <button class="primary" id="t_out">控えを出す</button>
+      <button id="t_copy">コピー</button>
+      <button id="t_in">この文字から戻す</button>
+    </div>
+    <div class="btns" id="t_confirm" hidden><button class="primary" id="t_yes">置き換える</button><button id="t_no">やめる</button></div>
+  </div>
+  <div class="card">
+    <h2>すべて消す</h2>
+    <p>入力と記録を消して、最初の状態に戻します。</p>
+    <div class="btns"><button id="d_clear">すべて消す</button></div>
+  </div>
+  <p class="note" id="ver"></p>
+</section>
+</main>
+
+<nav class="bar">
+  <button data-tab="sim" class="on">試算</button>
+  <button data-tab="mon">見張り</button>
+  <button data-tab="data">データ</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const APP_VER = "1.1（オフライン版）";
+const KEY = "shisan-v1";
+/* この端末だけで書き出す（共有シート→「ファイル」に保存、だめならダウンロード） */
+const LOCAL_DL = {save: async ({filename, data})=>{
+  const blob = data instanceof Blob ? data : new Blob([data], {type:"text/plain;charset=utf-8"});
+  let file = null; try { file = new File([blob], filename, {type: blob.type || "application/octet-stream"}); } catch(e){}
+  if (file && navigator.canShare && navigator.canShare({files:[file]})){
+    try { await navigator.share({files:[file]}); return; }
+    catch(e){ if (e && e.name==="AbortError") throw {code:"declined"}; }
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 10000);
+}};
+
+/* ---------- 既定値 ---------- */
+const DEF_SIM = {
+  birth:"", start:"", endAge:90,
+  cash:"",
+  bonds:[
+    {name:"", amt:"", rate:"", end:""}
+  ],
+  nisa:"", nisaRet:"", nisaAdd:"", nisaAddEnd:"",
+  penAge:65, pen:"",
+  incs:[
+    {name:"", amt:"", from:"", to:""}
+  ],
+  exp:"", exp2Age:"", exp2:"", infl:0, bondFirst:false
+};
+const DEF_MON = {start:"", bal:"", end:"", budget:"", shift:"", kyuyo:74, shotoku:104, jumin:45};
+
+/* ---------- 保存 ---------- */
+let S = load();
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function blank(){ return {sim:clone(DEF_SIM), mon:{...DEF_MON}, recs:[], lastExport:null, ver:2}; }
+function fixSim(sim){ // 古い形（国債1本・収入1本）から移す
+  const b = clone(DEF_SIM);
+  const out = {...b, ...sim};
+  if (!Array.isArray(sim.bonds)){
+    out.bonds = b.bonds;
+    if (sim.bond!=="" && sim.bond!=null && isFinite(parseFloat(sim.bond))) out.bonds.unshift({name:"国債", amt:sim.bond, rate:sim.bondRate||"", end:sim.bondEnd||""});
+  }
+  if (!Array.isArray(sim.incs)) out.incs = b.incs;
+  ["bond","bondRate","bondEnd","oth","othFrom","othTo"].forEach(k=>delete out[k]);
+  return out;
+}
+function load(){
+  let d = null;
+  try { const t = localStorage.getItem(KEY); if (t) d = JSON.parse(t); } catch(e){}
+  const b = blank();
+  if (!d || typeof d !== "object") return b;
+  try { return {
+    sim: fixSim(d.sim||{}),
+    mon: {...b.mon, ...(d.mon||{})},
+    recs: Array.isArray(d.recs) ? d.recs : [],
+    lastExport: d.lastExport || null, ver:2
+  }; } catch(e){ return b; }
+}
+function writeLocal(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function save(){ writeLocal(); scheduleRemote(); }
+
+/* ---------- Claudeへの保存 ---------- */
+let DOC = null, remoteReady = false, writing = false, again = false, wTimer = null, DL = null;
+function payload(){ return {sim:S.sim, mon:S.mon, recs:S.recs, lastExport:S.lastExport, updated:new Date().toISOString()}; }
+function scheduleRemote(){ if (!DOC || !remoteReady) return; clearTimeout(wTimer); wTimer = setTimeout(flush, 800); }
+/* Claude側の保存が使えないと分かったら、以後は端末だけで続ける（無料版など） */
+const NO_REMOTE = ["not_granted","capability_disabled","capability_removed","revoked"];
+function goLocal(){ DOC = null; remoteReady = false; setSaveState("none"); }
+async function flush(){
+  if (!DOC) return;
+  if (writing){ again = true; return; }
+  writing = true;
+  try { await DOC.set(payload()); setSaveState("ok"); }
+  catch(e){ if (e && NO_REMOTE.includes(e.code)) goLocal(); else setSaveState("err", e); }
+  writing = false;
+  if (again){ again = false; flush(); }
+}
+function setSaveState(kind, e){
+  const el = document.getElementById("saveState"); if (!el) return;
+  if (kind==="ok") el.textContent = "Claudeに保存しています。別の端末で開いても同じ内容が出ます。";
+  else if (kind==="local") el.textContent = "入力と記録はこの端末の中に保存しています。端末の整理などで消えることもあるので、ときどき書き出すか「文字で控える」で控えを取ってください。";
+  else if (kind==="none") el.textContent = "この画面ではClaudeの側に保存できません（無料版など）。入力と記録はこの端末のブラウザにだけ残り、消えることもあります。控えは書き出すか、下の「文字で控える」で取っておいてください。";
+  else {
+    const code = e && e.code;
+    el.textContent = code==="quota_exceeded" ? "保存できる量の上限に達しました。古い記録を削除してください。"
+      : "いま保存できませんでした。少し待ってからもう一度操作してください。";
+    if (code!=="quota_exceeded") toast("保存できませんでした");
+  }
+}
+function fromData(d){
+  d = clone(d || {}); // Claudeから届くデータは書き換え不可なので、手元用に複製する
+  const b = blank();
+  return {sim:fixSim(d.sim||{}), mon:{...b.mon, ...(d.mon||{})},
+    recs:Array.isArray(d.recs)?d.recs.slice():[], lastExport:d.lastExport||null, ver:1};
+}
+async function connect(){
+  const c = window.claude;
+  if (!c || !c.use){ DL = LOCAL_DL; setSaveState("local");
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+    return; }
+  c.use("downloads").then(dl=>{ DL = dl; if (!dl) hideExport(); });
+  const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
+  let uid = null; try { uid = user ? await user.id() : null; } catch(e){}
+  if (!db || !uid){ setSaveState("none"); return; }
+  try { DOC = db.doc("data/users/" + uid + "/main"); } catch(e){ setSaveState("none"); return; }
+  try {
+    const snap = await DOC.get();
+    if (snap.exists){ S = fromData(snap.data()); writeLocal(); bindValues(); renderAll(); remoteReady = true; setSaveState("ok"); }
+    else { remoteReady = true; await flush(); }
+  } catch(e){
+    if (e && NO_REMOTE.includes(e.code)){ goLocal(); return; }
+    try { await new Promise(r=>setTimeout(r, 600+Math.random()*600)); const snap = await DOC.get();
+      if (snap.exists){ S = fromData(snap.data()); writeLocal(); bindValues(); renderAll(); }
+      remoteReady = true; setSaveState("ok");
+    } catch(e2){ if (e2 && NO_REMOTE.includes(e2.code)) goLocal(); else setSaveState("err", e2); }
+  }
+}
+function hideExport(){ const b = document.getElementById("d_exp"); if (b){ b.disabled = true; b.textContent = "この画面では書き出せません"; } }
+function arm(btn, label, fn){
+  if (btn.classList.contains("armed")){ clearTimeout(btn._t); btn.classList.remove("armed"); btn.textContent = btn._orig; fn(); return; }
+  btn._orig = btn.textContent; btn.classList.add("armed"); btn.textContent = label;
+  btn._t = setTimeout(()=>{ btn.classList.remove("armed"); btn.textContent = btn._orig; }, 3500);
+}
+
+/* ---------- 小道具 ---------- */
+const $ = s => document.querySelector(s);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+const has = v => v !== "" && v !== null && v !== undefined && isFinite(parseFloat(v));
+const ymToIdx = ym => { if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return null; const [y,m]=ym.split("-").map(Number); return y*12+(m-1); };
+const idxToYm = i => `${Math.floor(i/12)}-${String(i%12+1).padStart(2,"0")}`;
+const jYm = i => `${Math.floor(i/12)}年${i%12+1}月`;
+function man(v, d=0){ // 万円表示
+  const r = Math.round(v*10**d)/10**d;
+  return r.toLocaleString("ja-JP",{minimumFractionDigits:d, maximumFractionDigits:d});
+}
+function ageStr(months){ const y=Math.floor(months/12), m=months%12; return m ? `${y}歳${m}か月` : `${y}歳`; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),1800); }
+
+/* ---------- 試算 ---------- */
+function simulate(p){
+  const birth = ymToIdx(p.birth), start = ymToIdx(p.start);
+  if (birth===null || start===null) return {err:"生まれた年月と試算を始める月を入れてください。"};
+  const endAge = num(p.endAge) || 90;
+  const end = birth + endAge*12;          // この月の直前まで
+  if (end <= start) return {err:"試算の終わりの年齢が、始める月より前になっています。"};
+
+  let cash = num(p.cash), nisa = num(p.nisa);
+  const nisaR = Math.pow(1+num(p.nisaRet)/100, 1/12) - 1;
+  const bonds = (p.bonds||[]).map(b=>({amt:num(b.amt), r:num(b.rate)/100, end:ymToIdx(b.end)})).filter(b=>b.amt>0);
+  const bondSum = () => bonds.reduce((s,b)=>s+b.amt,0);
+  const incs = (p.incs||[]).map(x=>({m:num(x.amt)/12, from:ymToIdx(x.from), to:ymToIdx(x.to)})).filter(x=>x.m>0);
+  const addEnd = ymToIdx(p.nisaAddEnd);
+  const addTotal = num(p.nisaAdd);
+  const addMonths = (addTotal>0 && addEnd!==null && addEnd>=start) ? (addEnd-start+1) : 0;
+  const addPer = addMonths ? addTotal/addMonths : 0;
+  const penStart = has(p.penAge) ? birth + num(p.penAge)*12 : Infinity;
+  const pen = num(p.pen)/12;
+  const exp1 = num(p.exp)/12;
+  const exp2Start = (has(p.exp2Age) && has(p.exp2)) ? birth + num(p.exp2Age)*12 : Infinity;
+  const exp2 = num(p.exp2)/12;
+  const inflM = Math.pow(1+num(p.infl)/100, 1/12);
+
+  const months = [], years = [];
+  let firstDraw = null, firstDrawFrom = null, depleted = null, shortfall = 0;
+  let yr = null;
+  for (let i=start; i<end; i++){
+    // 運用・利子
+    nisa *= (1+nisaR);
+    for (const b of bonds) if (b.amt>0) cash += b.amt*b.r/12;
+    // 償還
+    for (const b of bonds) if (b.end!==null && i===b.end && b.amt>0){ cash += b.amt; b.amt = 0; }
+    // NISAへ入れる
+    if (addPer && i<=addEnd){ cash -= addPer; nisa += addPer; }
+    // 収入
+    if (i>=penStart) cash += pen;
+    for (const x of incs) if ((x.from===null || i>=x.from) && (x.to===null || i<=x.to)) cash += x.m;
+    // 支出
+    const base = i>=exp2Start ? exp2 : exp1;
+    cash -= base * Math.pow(inflM, i-start);
+    // 不足を埋める
+    let drew = 0;
+    if (cash < 0){
+      const order = p.bondFirst ? ["bond","nisa"] : ["nisa","bond"];
+      for (const src of order){
+        if (cash >= 0) break;
+        const need = -cash;
+        if (src==="nisa" && nisa>0){ const t=Math.min(nisa,need); nisa-=t; cash+=t; drew+=t; if(firstDraw===null){firstDraw=i; firstDrawFrom="NISA";} }
+        if (src==="bond") for (const b of bonds){ if (cash>=0) break; if (b.amt<=0) continue; const t=Math.min(b.amt,-cash); b.amt-=t; cash+=t; drew+=t; if(firstDraw===null){firstDraw=i; firstDrawFrom="国債";} }
+      }
+      if (cash < -1e-9 && depleted===null) depleted = i;
+      if (cash < 0){ shortfall += -cash; cash = 0; }
+    }
+    const bond = bondSum();
+    months.push({i, cash, bond, nisa});
+    const y = Math.floor(i/12);
+    if (!yr || yr.y!==y){ yr = {y, draw:0}; years.push(yr); }
+    yr.draw += drew;
+    Object.assign(yr, {cash, bond, nisa, age: Math.floor((i-birth)/12)});
+  }
+  const last = months[months.length-1];
+  return {birth, start, end, endAge, months, years, firstDraw, firstDrawFrom, depleted, shortfall, last};
+}
+
+function renderSim(){
+  { const c0=num(S.sim.cash), b0=(S.sim.bonds||[]).reduce((s,b)=>s+num(b.amt),0), n0=num(S.sim.nisa);
+    $("#s_total").textContent = man(c0+b0+n0);
+    $("#s_totalSub").textContent = `現金 ${man(c0)}・国債 ${man(b0)}・NISA ${man(n0)}（万円）`; }
+  const r = simulate(S.sim);
+  const box = $("#simResult");
+  if (r.err){ box.innerHTML = `<p class="ng">${esc(r.err)}</p>`; $("#simChart").innerHTML=""; $("#simTable").innerHTML=""; return; }
+  const total0 = num(S.sim.cash)+(S.sim.bonds||[]).reduce((s,b)=>s+num(b.amt),0)+num(S.sim.nisa);
+  let html = `<h2>結果</h2><div class="kv">`;
+  if (total0 <= 0){
+    html += `<div><p class="note">下の「始める月の資産」に金額を入れると、結果が出ます。</p></div>`;
+  } else {
+    if (r.firstDraw!==null){
+      html += `<div><div class="k">現金が尽きて取り崩しが始まる</div><div class="big">${ageStr(r.firstDraw-r.birth)}</div><div>${jYm(r.firstDraw)}・${r.firstDrawFrom}から</div></div>`;
+    } else if (r.depleted!==null){
+      html += `<div><div class="k">現金が尽きる</div><div class="big ng">${ageStr(r.depleted-r.birth)}</div><div>${jYm(r.depleted)}。取り崩せる国債・NISAはありません</div></div>`;
+    } else {
+      html += `<div><div class="k">現金が尽きて取り崩しが始まる</div><div class="big ok">${r.endAge}歳まで取り崩しなし</div></div>`;
+    }
+    if (r.depleted!==null && r.firstDraw!==null){
+      html += `<div><div class="k">資産が尽きる</div><div class="big ng">${ageStr(r.depleted-r.birth)}</div><div>${jYm(r.depleted)}。${r.endAge}歳までの不足は合計 ${man(r.shortfall)}万円</div></div>`;
+    } else if (r.depleted===null){
+      const t = r.last.cash+r.last.bond+r.last.nisa;
+      html += `<div><div class="k">${r.endAge}歳になる時点で残る資産</div><div class="big ok">${man(t)}万円</div><div>現金 ${man(r.last.cash)}・国債 ${man(r.last.bond)}・NISA ${man(r.last.nisa)}</div></div>`;
+    }
+  }
+  html += `</div>`;
+  box.innerHTML = html;
+  $("#simChart").innerHTML = total0>0 ? stackChart(r) : "";
+  $("#simTable").innerHTML = total0>0 ? simTable(r) : "";
+}
+
+function simTable(r){
+  let h = `<table><thead><tr><th>年</th><th>年齢</th><th>現金</th><th>国債</th><th>NISA</th><th>合計</th><th>取り崩し</th></tr></thead><tbody>`;
+  for (const y of r.years){
+    const t = y.cash+y.bond+y.nisa;
+    h += `<tr><td>${y.y}</td><td>${y.age}</td><td>${man(y.cash)}</td><td>${man(y.bond)}</td><td>${man(y.nisa)}</td><td><b>${man(t)}</b></td><td>${y.draw>0.05?man(y.draw):"－"}</td></tr>`;
+  }
+  return h + `</tbody></table>`;
+}
+
+/* ---------- グラフ（SVG手書き） ---------- */
+function niceMax(v){ if (v<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); for (const m of [1,1.5,2,2.5,3,4,5,6,8,10]) if (m*p>=v) return m*p; return 10*p; }
+function stackChart(r){
+  const W=360, H=230, L=44, R=6, T=10, B=28;
+  const ms = r.months; if (!ms.length) return "";
+  const maxV = niceMax(Math.max(...ms.map(m=>m.cash+m.bond+m.nisa)));
+  const x = i => L + (i-r.start)/(Math.max(1,r.end-1-r.start))*(W-L-R);
+  const y = v => T + (1-v/maxV)*(H-T-B);
+  const step = Math.max(1, Math.floor(ms.length/240));
+  const pts = ms.filter((m,k)=>k%step===0 || k===ms.length-1);
+  const layer = (lo, hi) => {
+    const top = pts.map(m=>`${x(m.i).toFixed(1)},${y(hi(m)).toFixed(1)}`);
+    const bot = pts.slice().reverse().map(m=>`${x(m.i).toFixed(1)},${y(lo(m)).toFixed(1)}`);
+    return top.concat(bot).join(" ");
+  };
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="資産の推移">`;
+  for (let k=0;k<=4;k++){ const v=maxV*k/4, yy=y(v);
+    g += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/>`;
+    g += `<text x="${L-6}" y="${yy+5}" text-anchor="end" font-size="12" fill="var(--sub)">${man(v)}</text>`; }
+  g += `<polygon points="${layer(m=>0, m=>m.nisa)}" fill="var(--c-nisa)" opacity=".85"/>`;
+  g += `<polygon points="${layer(m=>m.nisa, m=>m.nisa+m.bond)}" fill="var(--c-bond)" opacity=".85"/>`;
+  g += `<polygon points="${layer(m=>m.nisa+m.bond, m=>m.nisa+m.bond+m.cash)}" fill="var(--c-cash)" opacity=".85"/>`;
+  // 年齢目盛り
+  const a0 = Math.ceil((r.start-r.birth)/12), a1 = Math.floor((r.end-1-r.birth)/12);
+  const span = a1-a0, every = span>30?10:5;
+  for (let a=a0; a<=a1; a++){ if (a%every) continue; const xx=x(r.birth+a*12);
+    g += `<line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${H-B+5}" stroke="var(--sub)"/>`;
+    g += `<text x="${xx}" y="${H-B+19}" text-anchor="middle" font-size="12" fill="var(--sub)">${a}歳</text>`; }
+  if (r.firstDraw!==null){ const xx=x(r.firstDraw);
+    g += `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}" stroke="var(--warn)" stroke-dasharray="5 4" stroke-width="2"/>`;
+    g += `<text x="${Math.min(xx+5, W-R-74)}" y="${T+16}" font-size="12" fill="var(--warn)">取り崩し開始</text>`; }
+  return g + `</svg><p class="note">縦軸は万円。</p>`;
+}
+
+/* ---------- 見張り ---------- */
+function monitor(){
+  const st = ymToIdx(S.mon.start), en = ymToIdx(S.mon.end), bal0 = num(S.mon.bal);
+  if (st===null || en===null || en<st || !has(S.mon.bal)) return {err:true};
+  const span = en - st + 1;                      // 使う月数
+  const even = bal0/span;                         // 残高を均等に割った額
+  const plan = has(S.mon.budget) && num(S.mon.budget)>0 ? num(S.mon.budget) : even;
+  const usingBudget = plan !== even;
+  const shift = num(S.mon.shift) > 0 ? num(S.mon.shift) : 0;
+  const recs = S.recs.slice().sort((a,b)=>a.ym<b.ym?-1:1);
+  const rows = []; let prevBal = bal0, prevIdx = st-1;
+  for (const rc of recs){
+    const i = ymToIdx(rc.ym); if (i===null) continue;
+    const gap = Math.max(1, i - prevIdx);
+    const job = num(rc.job), tip = num(rc.tip), fee = num(rc.fee), tipNet = tip - fee;
+    const spent = prevBal + num(rc.inc) + job + tipNet - num(rc.bal);
+    const over = spent - plan*gap;                // 予算からのはみ出し（マイナスは余り）
+    const earned = job + tipNet;                  // はみ出しを埋める稼ぎ
+    rows.push({...rc, i, spent, gap, job, tip, fee, tipNet, earned, over, short: over - earned});
+    prevBal = num(rc.bal); prevIdx = i;
+  }
+  return {st, en, span, plan, even, usingBudget, shift, bal0, rows};
+}
+
+function renderMon(){
+  const m = monitor();
+  const box = $("#monResult");
+  if (m.err){
+    box.innerHTML = `<h2>今の状況</h2><p class="note">下の「見張りの設定」に、始める月・初めの残高・持たせる月を入れてください。</p>`;
+    $("#monSet").open = true; $("#monChart").innerHTML=""; renderRecs(null); return;
+  }
+  let h = `<h2>今の状況</h2><div class="kv">`;
+  h += m.usingBudget
+    ? `<div><div class="k">月の予算</div><div class="big">${man(m.plan,1)}万円</div><div>残高を${jYm(m.en)}まで均等に割ると ${man(m.even,1)}万円</div></div>`
+    : `<div><div class="k">計画で毎月使える額（${jYm(m.st)}〜${jYm(m.en)}・${m.span}か月）</div><div class="big">${man(m.plan,1)}万円</div></div>`;
+  if (m.rows.length){
+    const last = m.rows[m.rows.length-1], y = Math.floor(last.i/12);
+    const yr = m.rows.filter(r=>Math.floor(r.i/12)===y);
+    const over = yr.reduce((s,r)=>s+r.over,0), job = yr.reduce((s,r)=>s+r.earned,0), short = over - job;
+    const times = m.shift>0 && short>0 ? Math.ceil(short/m.shift) : 0;
+    const lastShort = last.short, lastTimes = m.shift>0 && lastShort>0 ? Math.ceil(lastShort/m.shift) : 0;
+    h += `<div><div class="k">${jYm(last.i)}のはみ出し</div><div class="big ${lastShort>0.05?"ng":"ok"}">${lastShort>0.05 ? `あと ${man(lastShort,1)}万円${lastTimes?`（バイト${lastTimes}回分）`:""}` : "埋まっています"}</div><div>使った額 ${man(last.spent,1)}万円・予算との差 ${last.over>=0?"+":"−"}${man(Math.abs(last.over),1)}万円・稼ぎ ${man(last.earned,1)}万円</div></div>`;
+    h += `<div><div class="k">${y}年の累計（${yr.length}回の記録）</div><div class="big ${short>0.05?"ng":"ok"}">${short>0.05 ? `あと ${man(short,1)}万円${times?`（バイト${times}回分）`:""}` : (-short>0.05 ? `埋まっています（余り ${man(-short,1)}万円）` : "埋まっています")}</div><div>はみ出し ${over>=0?"+":"−"}${man(Math.abs(over),1)}万円・稼ぎ（バイト代と投げ銭） ${man(job,1)}万円</div></div>`;
+  }
+  if (m.rows.length){
+    const last = m.rows[m.rows.length-1];
+    const used = m.rows.reduce((s,r)=>s+r.spent,0);
+    const monthsPassed = last.i - m.st + 1;
+    const avg = used/monthsPassed;
+    const remain = m.en - last.i;
+    h += `<div><div class="k">これまでの平均（${monthsPassed}か月）</div><div class="big ${avg>m.plan?"ng":"ok"}">${man(avg,1)}万円／月</div><div>計画より ${avg>m.plan?"多い":"少ない"}：${man(Math.abs(avg-m.plan),1)}万円／月</div></div>`;
+    if (remain>0){
+      const canUse = num(last.bal)/remain;
+      const proj = num(last.bal) - avg*remain;
+      h += `<div><div class="k">今の残高で、あと${remain}か月に毎月使える額</div><div class="big">${man(canUse,1)}万円</div></div>`;
+      h += `<div><div class="k">このペースが続くと、${jYm(m.en)}の時点で</div><div class="big ${proj<0?"ng":"ok"}">${proj<0?"不足 "+man(-proj)+"万円":"残り "+man(proj)+"万円"}</div></div>`;
+    } else {
+      h += `<div><div class="k">${jYm(m.en)}の時点の残高</div><div class="big">${man(num(last.bal))}万円</div></div>`;
+    }
+  } else {
+    h += `<div><p class="note">月末の残高を記録すると、計画との比較が出ます。</p></div>`;
+  }
+  box.innerHTML = h + `</div>`;
+  $("#monChart").innerHTML = monChart(m);
+  renderRecs(m);
+  renderTax(m);
+}
+
+function renderTax(m){
+  const box = $("#taxBox"); if (!box) return;
+  const rows = (m && m.rows) ? m.rows : [];
+  if (!rows.length){ box.innerHTML = `<p class="note">記録をつけると、その年のバイト代と投げ銭から申告の目安を出します。</p>`; return; }
+  const ky = num(S.mon.kyuyo), sh = num(S.mon.shotoku), ju = num(S.mon.jumin);
+  const years = [...new Set(rows.map(r=>Math.floor(r.i/12)))].sort((a,b)=>b-a);
+  box.innerHTML = years.map(y=>{
+    const yr = rows.filter(r=>Math.floor(r.i/12)===y);
+    const T = yr.reduce((s,r)=>s+r.job,0), G = Math.max(0, yr.reduce((s,r)=>s+r.tipNet,0));
+    const kyuyoShotoku = Math.max(0, T - ky), total = kyuyoShotoku + G;
+    const needTax = total > sh, juminFree = total <= ju;
+    const roomTax = sh - total, roomJumin = ju - total;
+    return `<div class="kv" style="margin-bottom:12px">
+      <div><div class="k">${y}年（記録 ${yr.length}か月分）</div><div>バイト代 ${man(T,1)}万円（給与所得 ${man(kyuyoShotoku,1)}万円）・投げ銭の所得 ${man(G,1)}万円・合計所得 <b>${man(total,1)}万円</b></div></div>
+      <div><div class="k">所得税の確定申告</div><div class="big ${needTax?"ng":"ok"}">${needTax?"要る":"要らない"}</div><div>${needTax?`基準を ${man(-roomTax,1)}万円超えています`:`基準まであと ${man(roomTax,1)}万円`}</div></div>
+      <div><div class="k">住民税</div><div class="big ${juminFree?"ok":"ng"}">${juminFree?"非課税の目安":"かかる目安"}</div><div>${juminFree?`非課税の基準まであと ${man(roomJumin,1)}万円`:`非課税の基準を ${man(-roomJumin,1)}万円超えています`}</div>${G>0 && !needTax ? `<div class="note">投げ銭があり確定申告をしない年は、市役所に住民税の申告が要ります。</div>` : ""}</div>
+    </div>`;
+  }).join("") + `<p class="note">ほかに所得がない前提の目安です。年金を受け取り始めた年などは当てはまりません。記録のない月があると少なめに出ます。</p>`;
+}
+
+function monChart(m){
+  const W=360, H=210, L=44, R=6, T=10, B=28;
+  const vals = [m.bal0, ...m.rows.map(r=>num(r.bal))];
+  const maxV = niceMax(Math.max(...vals, 1));
+  const x = i => L + (i-(m.st-1))/(Math.max(1, m.en-(m.st-1)))*(W-L-R);
+  const y = v => T + (1-Math.max(0,v)/maxV)*(H-T-B);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="残高の推移">`;
+  for (let k=0;k<=4;k++){ const v=maxV*k/4, yy=y(v);
+    g += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;
+    g += `<text x="${L-6}" y="${yy+5}" text-anchor="end" font-size="12" fill="var(--sub)">${man(v)}</text>`; }
+  { const endV = m.bal0 - m.plan*m.span;
+    g += `<line x1="${x(m.st-1)}" y1="${y(m.bal0)}" x2="${x(m.en)}" y2="${y(endV)}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="6 5"/>`; }
+  // 年の目盛り
+  for (let i=m.st; i<=m.en; i++){ if (i%12!==0) continue; const xx=x(i);
+    g += `<text x="${xx}" y="${H-B+19}" text-anchor="middle" font-size="12" fill="var(--sub)">${Math.floor(i/12)}</text>`;
+    g += `<line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${H-B+5}" stroke="var(--sub)"/>`; }
+  if (m.rows.length){
+    const pts = [[m.st-1, m.bal0], ...m.rows.map(r=>[r.i, num(r.bal)])];
+    g += `<polyline points="${pts.map(p=>`${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--c-cash)" stroke-width="3"/>`;
+    for (const p of pts) g += `<circle cx="${x(p[0]).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="4" fill="var(--c-cash)"/>`;
+  }
+  return g + `</svg><p class="note">縦軸は万円。</p>`;
+}
+
+function renderRecs(m){
+  const list = $("#recList");
+  if (!S.recs.length){ list.innerHTML = `<p class="note">まだ記録がありません。</p>`; return; }
+  const map = {}; if (m && m.rows) for (const r of m.rows) map[r.ym] = r;
+  const sorted = S.recs.slice().sort((a,b)=>a.ym<b.ym?1:-1);
+  list.innerHTML = sorted.map(rc=>{
+    const r = map[rc.ym], i = ymToIdx(rc.ym);
+    const sp = r ? `使った額 ${man(r.spent,1)}万円${r.gap>1?`（${r.gap}か月分）`:""}　予算との差 ${r.over>=0?"+":"−"}${man(Math.abs(r.over),1)}万円` : "";
+    return `<div class="rec"><div><div class="m">${i!==null?jYm(i):esc(rc.ym)}　残高 ${man(num(rc.bal),1)}万円</div><div class="d">${num(rc.job)?`バイト代 ${man(num(rc.job),1)}万円　`:""}${num(rc.tip)?`投げ銭 ${man(num(rc.tip),1)}万円（手数料 ${man(num(rc.fee),1)}万円）　`:""}${num(rc.inc)?`ほかに入ったお金 ${man(num(rc.inc),1)}万円　`:""}${sp}</div></div><button class="small" data-del="${esc(rc.ym)}">削除</button></div>`;
+  }).join("");
+}
+
+/* ---------- 国債・収入の一覧 ---------- */
+const LISTS = {
+  bonds:{box:"#bondList", blank:{name:"", amt:"", rate:"", end:""}, fields:[
+    ["amt","額","number","万円"],["rate","利率（年・税引後）","number","%"],["end","満期（償還）","month",""]]},
+  incs:{box:"#incList", blank:{name:"", amt:"", from:"", to:""}, fields:[
+    ["amt","年額","number","万円"],["from","受け取り始める月","month",""],["to","終わる月","month",""]]}
+};
+function renderList(key){
+  const L = LISTS[key], arr = S.sim[key] || (S.sim[key]=[]);
+  $(L.box).innerHTML = arr.map((it,i)=>{
+    const rows = L.fields.map(([f,label,type,unit])=>{
+      const id = `${key}_${i}_${f}`;
+      const inp = type==="month"
+        ? `<input type="month" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" value="${esc(it[f]??"")}">`
+        : `<input type="number" inputmode="decimal" step="0.01" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" value="${esc(it[f]??"")}">`;
+      return `<div class="row"><label for="${id}">${label}</label><div class="in">${inp}${unit?`<span class="unit">${unit}</span>`:""}</div></div>`;
+    }).join("");
+    return `<div class="item"><div class="head"><input type="text" id="${key}_${i}_name" aria-label="名前" placeholder="名前" data-list="${key}" data-i="${i}" data-f="name" value="${esc(it.name||"")}"><button class="small" data-rm="${key}" data-i="${i}">外す</button></div>${rows}</div>`;
+  }).join("") || `<p class="note">まだありません。</p>`;
+}
+function onListInput(e){
+  const el = e.target; const key = el.dataset && el.dataset.list; if (!key) return;
+  const it = S.sim[key][+el.dataset.i]; if (!it) return;
+  it[el.dataset.f] = el.value; save(); renderSim();
+}
+["#bondList","#incList"].forEach(sel=>{
+  const box = $(sel);
+  box.addEventListener("input", onListInput); box.addEventListener("change", onListInput);
+  box.addEventListener("click", e=>{
+    const btn = e.target.closest("button[data-rm]"); if (!btn) return;
+    const key = btn.dataset.rm, i = +btn.dataset.i;
+    arm(btn, "もう一度で外す", ()=>{ S.sim[key].splice(i,1); save(); renderList(key); renderSim(); });
+  });
+});
+$("#addBond").addEventListener("click", ()=>{ S.sim.bonds.push(clone(LISTS.bonds.blank)); save(); renderList("bonds"); });
+$("#addInc").addEventListener("click", ()=>{ S.sim.incs.push(clone(LISTS.incs.blank)); save(); renderList("incs"); });
+
+/* ---------- 入力の結びつけ ---------- */
+function bindForm(){
+  document.querySelectorAll("[data-k]").forEach(el=>{
+    const k = el.dataset.k;
+    if (el.type==="checkbox") el.checked = !!S.sim[k]; else el.value = S.sim[k] ?? "";
+    el.addEventListener("input", ()=>{ S.sim[k] = el.type==="checkbox" ? el.checked : el.value; save(); renderSim(); });
+    el.addEventListener("change", ()=>{ S.sim[k] = el.type==="checkbox" ? el.checked : el.value; save(); renderSim(); });
+  });
+  document.querySelectorAll("[data-m]").forEach(el=>{
+    const k = el.dataset.m; el.value = S.mon[k] ?? "";
+    const f = ()=>{ S.mon[k] = el.value; save(); renderMon(); };
+    el.addEventListener("input", f); el.addEventListener("change", f);
+  });
+}
+function defaultRecYm(){
+  const st = ymToIdx(S.mon.start);
+  if (S.recs.length){ const mx = Math.max(...S.recs.map(r=>ymToIdx(r.ym)??0)); return idxToYm(mx+1); }
+  if (st!==null) return idxToYm(st);
+  const d = new Date(); return idxToYm(d.getFullYear()*12+d.getMonth());
+}
+$("#r_add").addEventListener("click", ()=>{
+  const ym = $("#r_ym").value, bal = $("#r_bal").value, inc = $("#r_inc").value, job = $("#r_job").value, tip = $("#r_tip").value, fee = $("#r_fee").value;
+  if (ymToIdx(ym)===null){ toast("年月を入れてください"); return; }
+  if (!has(bal)){ toast("月末の残高を入れてください"); return; }
+  const st = ymToIdx(S.mon.start);
+  if (st!==null && ymToIdx(ym) < st){ toast("始める月より前の月です"); return; }
+  const k = S.recs.findIndex(r=>r.ym===ym);
+  const rec = {ym, bal:num(bal), inc: has(inc)?num(inc):0, job: has(job)?num(job):0, tip: has(tip)?num(tip):0, fee: has(fee)?num(fee):0};
+  if (k>=0) S.recs[k] = rec; else S.recs.push(rec);
+  save(); $("#r_bal").value=""; $("#r_inc").value=""; $("#r_job").value=""; $("#r_tip").value=""; $("#r_fee").value=""; $("#r_ym").value = defaultRecYm();
+  renderMon(); toast(k>=0 ? "上書きしました" : "記録しました");
+});
+$("#recList").addEventListener("click", e=>{
+  const btn = e.target.closest("button[data-del]"); if (!btn) return;
+  const ym = btn.dataset.del;
+  arm(btn, "もう一度押すと削除", ()=>{ S.recs = S.recs.filter(r=>r.ym!==ym); save(); renderMon(); $("#r_ym").value = defaultRecYm(); toast("削除しました"); });
+});
+
+/* ---------- タブ ---------- */
+document.querySelectorAll("nav.bar button").forEach(b=>b.addEventListener("click", ()=>{
+  document.querySelectorAll("nav.bar button").forEach(x=>x.classList.toggle("on", x===b));
+  document.querySelectorAll("section.tab").forEach(s=>s.classList.toggle("on", s.id==="tab-"+b.dataset.tab));
+  window.scrollTo(0,0);
+  if (b.dataset.tab==="data") renderData();
+}));
+
+/* ---------- 計算結果の書き出し ---------- */
+function summaryRows(r){
+  const out = [];
+  if (r.firstDraw!==null) out.push(["現金が尽きて取り崩しが始まる", `${ageStr(r.firstDraw-r.birth)}（${jYm(r.firstDraw)}・${r.firstDrawFrom}から）`]);
+  else if (r.depleted!==null) out.push(["現金が尽きる", `${ageStr(r.depleted-r.birth)}（${jYm(r.depleted)}）`]);
+  else out.push(["現金が尽きて取り崩しが始まる", `${r.endAge}歳まで取り崩しなし`]);
+  if (r.depleted!==null && r.firstDraw!==null) out.push(["資産が尽きる", `${ageStr(r.depleted-r.birth)}（${jYm(r.depleted)}）・不足合計 ${man(r.shortfall)}万円`]);
+  if (r.depleted===null){ const t=r.last.cash+r.last.bond+r.last.nisa; out.push([`${r.endAge}歳になる時点で残る資産`, `${man(t)}万円`]); }
+  return out;
+}
+function premiseRows(){
+  const p = S.sim, rows = [];
+  rows.push(["生まれた年月", p.birth], ["試算を始める月", p.start], ["試算の終わり", `${p.endAge}歳`], ["現金", `${num(p.cash)}万円`]);
+  for (const b of p.bonds||[]) if (num(b.amt)>0) rows.push([b.name||"国債", `${num(b.amt)}万円・税引後${num(b.rate)}%・満期${b.end||"なし"}`]);
+  rows.push(["NISA", `${num(p.nisa)}万円・年${num(p.nisaRet)}%`]);
+  if (num(p.nisaAdd)>0) rows.push(["NISAへ入れる額", `${num(p.nisaAdd)}万円（${p.nisaAddEnd||"?"}まで）`]);
+  rows.push(["公的年金", `${p.penAge}歳から年${num(p.pen)}万円`]);
+  for (const x of p.incs||[]) if (num(x.amt)>0) rows.push([x.name||"収入", `年${num(x.amt)}万円・${x.from||"?"}〜${x.to||"?"}`]);
+  rows.push(["年間の生活費", `${num(p.exp)}万円`]);
+  if (has(p.exp2Age) && has(p.exp2)) rows.push(["生活費の変更", `${p.exp2Age}歳から${num(p.exp2)}万円`]);
+  rows.push(["物価上昇", `年${num(p.infl)}%`], ["現金不足の崩し方", p.bondFirst ? "国債を先に" : "NISAを先に"]);
+  return rows;
+}
+function yearRows(r){
+  return r.years.map(y=>[y.y, y.age, Math.round(y.cash), Math.round(y.bond), Math.round(y.nisa), Math.round(y.cash+y.bond+y.nisa), Math.round(y.draw)]);
+}
+const YEAR_HEAD = ["年","年齢","現金（万円）","国債（万円）","NISA（万円）","合計（万円）","取り崩し（万円）"];
+function xState(t){ const el=$("#xState"); el.textContent=t; el.hidden=!t; }
+async function offer(filename, data){
+  if (!DL){ xState("この画面では書き出せません。"); return; }
+  try { await DL.save({filename, data}); xState(""); toast("書き出しました"); }
+  catch(e){ const c=e&&e.code; if (c==="declined") return; xState(c==="rate_limited" ? "少し待ってからもう一度押してください。" : "書き出せませんでした。"); }
+}
+function readyResult(){
+  const r = simulate(S.sim);
+  if (r.err){ xState(r.err); return null; }
+  return r;
+}
+$("#x_csv").addEventListener("click", ()=>{
+  const r = readyResult(); if (!r) return;
+  const q = v => { const t=String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g,'""')}"` : t; };
+  const lines = [YEAR_HEAD, ...yearRows(r)].map(row=>row.map(q).join(","));
+  offer(`資産の見通し_年ごと_${today()}.csv`, "\uFEFF" + lines.join("\r\n"));
+});
+/* 小さなzip（無圧縮）とxlsxを自前で組む：外の部品に頼らない */
+const enc = new TextEncoder();
+const CRC = (()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u){ let c=0xFFFFFFFF; for(let i=0;i<u.length;i++) c = CRC[(c^u[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zip(files){ // files: [[name, Uint8Array]]
+  const parts=[], cen=[]; let off=0;
+  const u16=v=>[v&255,(v>>>8)&255], u32=v=>[v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];
+  for (const [name,data] of files){
+    const nb=enc.encode(name), crc=crc32(data);
+    const lh=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0)]);
+    parts.push(lh,nb,data);
+    cen.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]), nb);
+    off += lh.length+nb.length+data.length;
+  }
+  const cenLen = cen.reduce((s,x)=>s+x.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cenLen),...u32(off),...u16(0)]);
+  return new Blob([...parts,...cen,end], {type:"application/zip"});
+}
+const xesc = v => String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+function colName(i){ let s=""; i++; while(i){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; }
+function sheetXml(rows, widths, headBold){
+  const cols = widths ? `<cols>${widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")}</cols>` : "";
+  const body = rows.map((row,ri)=>`<row r="${ri+1}">${row.map((v,ci)=>{
+    const ref=colName(ci)+(ri+1), st=(headBold && ri===0) ? ' s="1"' : "";
+    return (typeof v==="number" && isFinite(v)) ? `<c r="${ref}"${st}><v>${v}</v></c>` : `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xesc(v??"")}</t></is></c>`;
+  }).join("")}</row>`).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${cols}<sheetData>${body}</sheetData></worksheet>`;
+}
+function xlsxBlob(sheets){ // [[name, rows, widths, headBold]]
+  const ns='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', rns='xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const files=[
+    ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`],
+    ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook ${ns} ${rns}><sheets>${sheets.map((sh,i)=>`<sheet name="${xesc(sh[0])}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet ${ns}><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
+    ...sheets.map((sh,i)=>[`xl/worksheets/sheet${i+1}.xml`, sheetXml(sh[1], sh[2], sh[3])])
+  ];
+  return zip(files.map(([n,t])=>[n, enc.encode(t)]));
+}
+$("#x_xlsx").addEventListener("click", ()=>{
+  const r = readyResult(); if (!r) return;
+  const sum = [["結果",""], ...summaryRows(r), ["",""], ["前提",""], ...premiseRows()];
+  offer(`資産の見通し_${today()}.xlsx`, xlsxBlob([["要約", sum, [32,56], false], ["年ごと", [YEAR_HEAD, ...yearRows(r)], YEAR_HEAD.map(()=>15), true]]));
+});
+function pdfPages(r){
+  // A4縦を 1240x1754 のキャンバスに描き、画像としてPDFに貼る（日本語の字形をそのまま使うため）
+  const W=1240, H=1754, M=90, font='"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
+  const C={ink:"#1b2126", sub:"#56616b", line:"#d3dae0", cash:"#2f7fb5", bond:"#c99a2e", nisa:"#3a9a6a", warn:"#b4532a"};
+  const pages=[];
+  const newPage=()=>{ const c=document.createElement("canvas"); c.width=W; c.height=H; const g=c.getContext("2d"); g.fillStyle="#ffffff"; g.fillRect(0,0,W,H); g.textBaseline="alphabetic"; pages.push(c); return g; };
+  let g=newPage(), y=M+40;
+  g.fillStyle=C.ink; g.font=`bold 52px ${font}`; g.fillText("資産の見通し", M, y);
+  g.fillStyle=C.sub; g.font=`26px ${font}`; g.fillText(`${today()} 時点の入力による試算`, M, y+=46);
+  y+=50; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("結果", M, y);
+  for (const [k,v] of summaryRows(r)){ y+=46; g.fillStyle=C.sub; g.font=`24px ${font}`; g.fillText(k, M, y); y+=40; g.fillStyle=C.ink; g.font=`bold 32px ${font}`; g.fillText(v, M, y); }
+  // グラフ
+  y+=60; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("資産の推移", M, y);
+  const top=y+30, ch=560, L=M+90, R=W-M, B=top+ch;
+  const ms=r.months, maxV=niceMax(Math.max(...ms.map(m=>m.cash+m.bond+m.nisa)));
+  const X=i=>L+(i-r.start)/Math.max(1,r.end-1-r.start)*(R-L), Y=v=>top+(1-v/maxV)*(ch-40);
+  g.font=`22px ${font}`; g.textAlign="right";
+  for(let k=0;k<=4;k++){ const v=maxV*k/4, yy=Y(v); g.strokeStyle=C.line; g.lineWidth=1; g.beginPath(); g.moveTo(L,yy); g.lineTo(R,yy); g.stroke(); g.fillStyle=C.sub; g.fillText(man(v), L-10, yy+8); }
+  const area=(lo,hi,col)=>{ g.beginPath(); ms.forEach((m,k)=>{ const px=X(m.i), py=Y(hi(m)); k?g.lineTo(px,py):g.moveTo(px,py); }); for(let k=ms.length-1;k>=0;k--){ const m=ms[k]; g.lineTo(X(m.i),Y(lo(m))); } g.closePath(); g.fillStyle=col; g.globalAlpha=.85; g.fill(); g.globalAlpha=1; };
+  area(m=>0,m=>m.nisa,C.nisa); area(m=>m.nisa,m=>m.nisa+m.bond,C.bond); area(m=>m.nisa+m.bond,m=>m.nisa+m.bond+m.cash,C.cash);
+  g.textAlign="center"; g.fillStyle=C.sub;
+  const a0=Math.ceil((r.start-r.birth)/12), a1=Math.floor((r.end-1-r.birth)/12), ev=(a1-a0)>30?10:5;
+  for(let a=a0;a<=a1;a++){ if(a%ev) continue; g.fillText(`${a}歳`, X(r.birth+a*12), Y(0)+34); }
+  if (r.firstDraw!==null){ const xx=X(r.firstDraw); g.strokeStyle=C.warn; g.setLineDash([10,8]); g.lineWidth=3; g.beginPath(); g.moveTo(xx,top); g.lineTo(xx,Y(0)); g.stroke(); g.setLineDash([]); g.textAlign="left"; g.fillStyle=C.warn; g.fillText("取り崩し開始", Math.min(xx+8,R-150), top+24); }
+  g.textAlign="left"; let lx=M; const ly=B+50; g.font=`24px ${font}`;
+  for (const [t,col] of [["現金",C.cash],["国債",C.bond],["NISA",C.nisa]]){ g.fillStyle=col; g.fillRect(lx,ly-20,22,22); g.fillStyle=C.sub; g.fillText(t,lx+32,ly); lx+=150; }
+  g.fillStyle=C.sub; g.fillText("縦軸は万円", R-140, ly);
+  // 前提
+  y=ly+70; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("前提", M, y);
+  g.font=`22px ${font}`;
+  for (const [k,v] of premiseRows()){ y+=34; if (y>H-M){ g=newPage(); y=M+30; g.font=`22px ${font}`; } g.fillStyle=C.sub; g.fillText(k, M, y); g.fillStyle=C.ink; g.fillText(v, M+330, y); }
+  // 表
+  g=newPage(); y=M+30; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("年ごとの残高（年末・万円）", M, y);
+  const cols=[M, M+110, M+230, M+390, M+550, M+710, M+870], head=["年","年齢","現金","国債","NISA","合計","取り崩し"];
+  const rowH=Math.min(34, Math.floor((H-M-(y+50))/(r.years.length+1)));
+  const fs=Math.max(16, rowH-10);
+  const drawRow=(cells,yy,bold,color)=>{ g.font=`${bold?"bold ":""}${fs}px ${font}`; g.fillStyle=color; cells.forEach((c,k)=>{ g.textAlign=k<2?"left":"right"; g.fillText(String(c), k<2?cols[k]:cols[k]+150, yy); }); g.textAlign="left"; };
+  y+=50; drawRow(head,y,true,C.sub);
+  for (const row of yearRows(r)){ y+=rowH; if (y>H-M){ g=newPage(); y=M+30; drawRow(head,y,true,C.sub); y+=rowH; } g.strokeStyle=C.line; g.lineWidth=1; g.beginPath(); g.moveTo(M,y-rowH+8); g.lineTo(W-M,y-rowH+8); g.stroke();
+    drawRow([row[0],row[1],man(row[2]),man(row[3]),man(row[4]),man(row[5]),row[6]>0?man(row[6]):"－"], y, false, C.ink); }
+  return pages;
+}
+/* ページ画像（JPEG）だけのPDFを自前で組む */
+function pdfFromCanvases(canvases){
+  const chunks=[]; let len=0; const offs=[];
+  const push = x => { const u = typeof x==="string" ? enc.encode(x) : x; chunks.push(u); len+=u.length; };
+  const obj = (n, body) => { offs[n]=len; push(`${n} 0 obj\n`); body(); push("\nendobj\n"); };
+  push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  const n = canvases.length, kids=[];
+  for (let k=0;k<n;k++) kids.push(`${3+k*3} 0 R`);
+  obj(1, ()=>push("<< /Type /Catalog /Pages 2 0 R >>"));
+  obj(2, ()=>push(`<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${n} >>`));
+  canvases.forEach((c,k)=>{
+    const pid=3+k*3, cid=pid+1, iid=pid+2;
+    const b64=c.toDataURL("image/jpeg",0.9).split(",")[1], bin=atob(b64), img=new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) img[i]=bin.charCodeAt(i);
+    const content=`q 595.28 0 0 841.89 0 0 cm /Im0 Do Q`;
+    obj(pid, ()=>push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ${iid} 0 R >> >> /Contents ${cid} 0 R >>`));
+    obj(cid, ()=>{ push(`<< /Length ${content.length} >>\nstream\n`); push(content); push("\nendstream"); });
+    obj(iid, ()=>{ push(`<< /Type /XObject /Subtype /Image /Width ${c.width} /Height ${c.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.length} >>\nstream\n`); push(img); push("\nendstream"); });
+  });
+  const total = 3+n*3, xref = len;
+  let x = `xref\n0 ${total}\n0000000000 65535 f \n`;
+  for (let i=1;i<total;i++) x += String(offs[i]).padStart(10,"0") + " 00000 n \n";
+  push(x + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(chunks, {type:"application/pdf"});
+}
+$("#x_pdf").addEventListener("click", ()=>{
+  const r = readyResult(); if (!r) return;
+  offer(`資産の見通し_${today()}.pdf`, pdfFromCanvases(pdfPages(r)));
+});
+
+/* ---------- 書き出し・読み込み ---------- */
+function renderData(){
+  $("#lastExp").textContent = S.lastExport ? `最後に書き出した日：${S.lastExport}` : "まだ書き出していません";
+  $("#ver").textContent = `バージョン ${APP_VER}`;
+}
+function today(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+$("#d_exp").addEventListener("click", async ()=>{
+  if (!DL){ toast("この画面では書き出せません"); return; }
+  const t = today();
+  const data = JSON.stringify({app:"shisan", ver:1, exported:t, sim:S.sim, mon:S.mon, recs:S.recs}, null, 2);
+  try {
+    await DL.save({filename:`資産の見通し_${t}.json`, data});
+    S.lastExport = t; save(); renderData(); toast("書き出しました");
+  } catch(e){
+    const c = e && e.code;
+    if (c==="declined") return;
+    toast(c==="rate_limited" ? "少し待ってからもう一度押してください" : "書き出せませんでした");
+  }
+});
+$("#d_imp").addEventListener("click", ()=>$("#d_file").click());
+let PENDING = null;
+$("#d_file").addEventListener("change", async e=>{
+  const f = e.target.files && e.target.files[0]; e.target.value=""; if (!f) return;
+  const st = $("#impState");
+  try {
+    const d = JSON.parse(await f.text());
+    if (!d || d.app!=="shisan") throw new Error("形式");
+    PENDING = d;
+    st.textContent = `${d.exported||"日付不明"} に書き出したデータです（記録 ${Array.isArray(d.recs)?d.recs.length:0}件）。置き換えますか？`;
+    st.hidden = false; $("#impConfirm").hidden = false;
+  } catch(err){ PENDING = null; st.textContent = "このアプリで書き出したファイルではありません。"; st.hidden = false; $("#impConfirm").hidden = true; }
+});
+$("#d_impYes").addEventListener("click", ()=>{
+  if (!PENDING) return;
+  const keep = S.lastExport; S = fromData(PENDING); S.lastExport = keep; PENDING = null;
+  $("#impConfirm").hidden = true; $("#impState").hidden = true;
+  save(); bindValues(); renderAll(); toast("読み込みました");
+});
+$("#d_impNo").addEventListener("click", ()=>{ PENDING = null; $("#impConfirm").hidden = true; $("#impState").hidden = true; });
+
+/* ---------- 文字で控える・戻す（書き出しが使えない画面用） ---------- */
+function tState(t){ const el=$("#t_state"); el.textContent=t; el.hidden=!t; }
+let T_PENDING = null;
+$("#t_out").addEventListener("click", ()=>{
+  const t = today();
+  $("#t_box").value = JSON.stringify({app:"shisan", ver:1, exported:t, sim:S.sim, mon:S.mon, recs:S.recs});
+  S.lastExport = t; save(); renderData();
+  T_PENDING = null; $("#t_confirm").hidden = true;
+  tState("中身を出しました。「コピー」を押すか、欄を長押しして全部選んでコピーしてください。");
+});
+$("#t_copy").addEventListener("click", async ()=>{
+  const box = $("#t_box");
+  if (!box.value.trim()){ tState("先に「控えを出す」を押してください。"); return; }
+  try { await navigator.clipboard.writeText(box.value); tState("コピーしました。チャットやメモに貼って残してください。"); }
+  catch(e){ box.focus(); box.select(); tState("この画面では自動でコピーできません。欄の文字を全部選んでコピーしてください。"); }
+});
+$("#t_in").addEventListener("click", ()=>{
+  const raw = $("#t_box").value.trim();
+  if (!raw){ tState("戻したい控えの文字を欄に貼ってください。"); return; }
+  try {
+    const s = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}")+1); // 前後に余計な文字が付いていても読む
+    const d = JSON.parse(s);
+    if (!d || d.app!=="shisan") throw new Error("形式");
+    T_PENDING = d;
+    tState(`${d.exported||"日付不明"} の控えです（記録 ${Array.isArray(d.recs)?d.recs.length:0}件）。今の入力と記録を置き換えますか？`);
+    $("#t_confirm").hidden = false;
+  } catch(e){ T_PENDING = null; $("#t_confirm").hidden = true; tState("このアプリの控えの文字として読めませんでした。途中が欠けていないか確かめてください。"); }
+});
+$("#t_yes").addEventListener("click", ()=>{
+  if (!T_PENDING) return;
+  const keep = S.lastExport; S = fromData(T_PENDING); S.lastExport = keep; T_PENDING = null;
+  $("#t_confirm").hidden = true; tState("");
+  save(); bindValues(); renderAll(); toast("戻しました");
+});
+$("#t_no").addEventListener("click", ()=>{ T_PENDING = null; $("#t_confirm").hidden = true; tState(""); });
+$("#d_clear").addEventListener("click", e=>{
+  arm(e.currentTarget, "もう一度押すとすべて消します", ()=>{ S = blank(); save(); bindValues(); renderAll(); toast("消しました"); });
+});
+function bindValues(){
+  document.querySelectorAll("[data-k]").forEach(el=>{ const k=el.dataset.k; if (el.type==="checkbox") el.checked=!!S.sim[k]; else el.value=S.sim[k]??""; });
+  document.querySelectorAll("[data-m]").forEach(el=>{ el.value = S.mon[el.dataset.m] ?? ""; });
+  $("#r_ym").value = defaultRecYm();
+  renderList("bonds"); renderList("incs");
+}
+function renderAll(){ renderSim(); renderMon(); renderData(); }
+
+/* ---------- 起動 ---------- */
+bindForm(); $("#r_ym").value = defaultRecYm(); renderList("bonds"); renderList("incs"); renderAll();
+connect();
+if ("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+</script>
+
+</body></html>
