@@ -1,5 +1,5 @@
 // 資産の見通し（オフライン版）: 中身を端末に保存して、ネットなしでも開けるようにする
-const CACHE = "shisan-v1.2";
+const CACHE = "shisan-v1.3";
 const FILES = ["./", "index.html", "manifest.json", "icon-180.png", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
