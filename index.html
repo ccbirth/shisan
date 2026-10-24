@@ -93,6 +93,10 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:16px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:.95}
+.seg{display:flex;align-items:center;gap:6px;margin:0 0 8px;flex-wrap:wrap}
+.seg span{color:var(--sub);font-size:15px;min-width:3em}
+.seg button{font-size:15px;padding:6px 12px}
+.seg button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
 .recs .rec{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:16px}
 .recs .rec:last-child{border-bottom:0}
 .recs .rec .m{font-weight:700}
@@ -174,6 +178,8 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 
   <div class="card">
     <h2>残高の推移</h2>
+    <div class="seg" role="group" aria-label="横軸"><span>横軸</span><button data-cx="near">記録の近く</button><button data-cx="all">全期間</button></div>
+    <div class="seg" role="group" aria-label="縦軸"><span>縦軸</span><button data-cy="zoom">拡大</button><button data-cy="all">0から</button></div>
     <div id="monChart"></div>
     <div class="legend"><span><i style="background:var(--sub)"></i>計画（予算どおりに減る線）</span><span><i style="background:var(--c-cash)"></i>生活に使える残高</span></div>
   </div>
@@ -280,7 +286,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 
 <script>
 "use strict";
-const APP_VER = "1.3（オフライン版）";
+const APP_VER = "1.4（オフライン版）";
 const KEY = "shisan-v1";
 /* この端末だけで書き出す（共有シート→「ファイル」に保存、だめならダウンロード） */
 const LOCAL_DL = {save: async ({filename, data})=>{
@@ -655,28 +661,64 @@ function renderTax(m){
   }).join("") + `<p class="note">ほかに所得がない前提の目安です。年金を受け取り始めた年などは当てはまりません。記録のない月があると少なめに出ます。</p>`;
 }
 
+/* グラフの表示の切り替え（この端末だけに覚える） */
+const CV_KEY = "shisan-chart-view";
+let CV = {x:"near", y:"zoom"};
+try { const t = localStorage.getItem(CV_KEY); if (t) CV = {...CV, ...JSON.parse(t)}; } catch(e){}
+function setCV(k, v){ CV[k] = v; try { localStorage.setItem(CV_KEY, JSON.stringify(CV)); } catch(e){} renderMon(); }
+document.querySelectorAll("[data-cx]").forEach(b=>b.addEventListener("click", ()=>setCV("x", b.dataset.cx)));
+document.querySelectorAll("[data-cy]").forEach(b=>b.addEventListener("click", ()=>setCV("y", b.dataset.cy)));
+function niceStep(range, n){ const raw = range/n, p = Math.pow(10, Math.floor(Math.log10(raw))); for (const k of [1,2,2.5,5,10]) if (k*p >= raw) return k*p; return 10*p; }
 function monChart(m){
-  const W=360, H=210, L=44, R=6, T=10, B=28;
-  const vals = [m.bal0, ...m.rows.map(r=>r.live)];
-  const maxV = niceMax(Math.max(...vals, 1));
-  const x = i => L + (i-(m.st-1))/(Math.max(1, m.en-(m.st-1)))*(W-L-R);
-  const y = v => T + (1-Math.max(0,v)/maxV)*(H-T-B);
-  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="残高の推移">`;
-  for (let k=0;k<=4;k++){ const v=maxV*k/4, yy=y(v);
-    g += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;
-    g += `<text x="${L-6}" y="${yy+5}" text-anchor="end" font-size="12" fill="var(--sub)">${man(v)}</text>`; }
-  { const endV = m.bal0 - m.plan*m.span;
-    g += `<line x1="${x(m.st-1)}" y1="${y(m.bal0)}" x2="${x(m.en)}" y2="${y(endV)}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="6 5"/>`; }
-  // 年の目盛り
-  for (let i=m.st; i<=m.en; i++){ if (i%12!==0) continue; const xx=x(i);
-    g += `<text x="${xx}" y="${H-B+19}" text-anchor="middle" font-size="12" fill="var(--sub)">${Math.floor(i/12)}</text>`;
-    g += `<line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${H-B+5}" stroke="var(--sub)"/>`; }
-  if (m.rows.length){
-    const pts = [[m.st-1, m.bal0], ...m.rows.map(r=>[r.i, r.live])];
-    g += `<polyline points="${pts.map(p=>`${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--c-cash)" stroke-width="3"/>`;
-    for (const p of pts) g += `<circle cx="${x(p[0]).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="4" fill="var(--c-cash)"/>`;
+  document.querySelectorAll("[data-cx]").forEach(b=>b.classList.toggle("on", b.dataset.cx===CV.x));
+  document.querySelectorAll("[data-cy]").forEach(b=>b.classList.toggle("on", b.dataset.cy===CV.y));
+  const W=360, H=210, L=48, R=10, T=12, B=30;
+  const x0 = m.st-1;
+  const lastI = m.rows.length ? m.rows[m.rows.length-1].i : x0;
+  const x1 = CV.x==="all" ? m.en : Math.min(m.en, Math.max(lastI + 6, x0 + 12));
+  const planAt = i => m.bal0 - m.plan*(i - x0);
+  const pts = [[x0, m.bal0], ...m.rows.map(r=>[r.i, r.live])].filter(p=>p[0]<=x1);
+  const vals = [...pts.map(p=>p[1]), planAt(x0), planAt(x1)];
+  let lo, hi;
+  if (CV.y==="all"){ lo = 0; hi = niceMax(Math.max(...vals, 1)); }
+  else {
+    const mn = Math.min(...vals), mx = Math.max(...vals), pad = Math.max((mx-mn)*0.15, Math.abs(mx)*0.02, 5);
+    const step = niceStep((mx-mn) + 2*pad, 4);
+    lo = Math.floor((mn-pad)/step)*step; hi = Math.ceil((mx+pad)/step)*step;
+    if (CV.y==="zoom" && lo < 0 && mn >= 0) lo = 0;
   }
-  return g + `</svg><p class="note">縦軸は万円。</p>`;
+  const step = niceStep(hi-lo, 4);
+  const x = i => L + (i-x0)/Math.max(1, x1-x0)*(W-L-R);
+  const y = v => T + (1-(v-lo)/Math.max(1e-9, hi-lo))*(H-T-B);
+  let g = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="残高の推移">`;
+  g += `<defs><clipPath id="mclip"><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}"/></clipPath></defs>`;
+  for (let v = Math.ceil(lo/step)*step; v <= hi + 1e-9; v += step){ const yy = y(v);
+    g += `<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)"/>`;
+    g += `<text x="${L-6}" y="${yy+4}" text-anchor="end" font-size="12" fill="var(--sub)">${man(v)}</text>`; }
+  // 横軸の目盛り：短い範囲は月、長い範囲は年
+  const span = x1 - x0;
+  for (let i = x0+1; i <= x1; i++){
+    const mo = i%12 + 1, yr = Math.floor(i/12);
+    let lab = null;
+    if (span > 30){ if (mo===1) lab = String(yr); }
+    else if (span > 12){ if (mo===1) lab = String(yr); else if (mo%3===1) lab = `${mo}月`; }
+    else { lab = mo===1 ? String(yr) : (mo%2===1 ? `${mo}月` : null); }
+    if (!lab) continue; const xx = x(i);
+    g += `<line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${H-B+5}" stroke="var(--sub)"/>`;
+    g += `<text x="${xx}" y="${H-B+19}" text-anchor="middle" font-size="12" fill="var(--sub)">${lab}</text>`; }
+  g += `<g clip-path="url(#mclip)">`;
+  g += `<line x1="${x(x0)}" y1="${y(planAt(x0))}" x2="${x(x1)}" y2="${y(planAt(x1))}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="6 5"/>`;
+  if (m.keep>0 && CV.x==="all") g += `<line x1="${x(x0)}" x2="${x(x1)}" y1="${y(m.keep)}" y2="${y(m.keep)}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="2 4"/>`;
+  if (pts.length > 1){
+    g += `<polyline points="${pts.map(p=>`${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--c-cash)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    pts.slice(0,-1).forEach(p=>{ g += `<circle cx="${x(p[0]).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="2.5" fill="var(--c-cash)"/>`; });
+  }
+  g += `</g>`;
+  if (pts.length > 1){ const lp = pts[pts.length-1], lx = x(lp[0]), ly = y(lp[1]);
+    g += `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="5" fill="var(--c-cash)" stroke="var(--card)" stroke-width="2"/>`;
+    const right = lx > W - 90;
+    g += `<text x="${right ? lx-8 : lx+8}" y="${ly - 8}" text-anchor="${right?"end":"start"}" font-size="12" font-weight="700" fill="var(--ink)" stroke="var(--card)" stroke-width="4" paint-order="stroke">${man(lp[1])}</text>`; }
+  return g + `</svg><p class="note">縦軸は万円。${m.keep>0 && CV.x==="all" ? "点線は残しておく額。" : ""}</p>`;
 }
 
 function renderRecs(m){
