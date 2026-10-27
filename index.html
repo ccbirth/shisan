@@ -145,8 +145,9 @@ nav.bar button.on{color:var(--accent);font-weight:700}
   <details class="card" open>
     <summary>収入と支出（年額）</summary>
     <h3>公的年金</h3>
-    <div class="row"><label for="s_penAge">受け取り開始</label><div class="in"><input type="number" inputmode="numeric" id="s_penAge" data-k="penAge"><span class="unit">歳</span></div></div>
-    <div class="row"><label for="s_pen">年額（手取り）</label><div class="in"><input type="number" inputmode="decimal" id="s_pen" data-k="pen"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_penAge">受け取り開始（60〜75）</label><div class="in"><input type="number" inputmode="numeric" id="s_penAge" data-k="penAge"><span class="unit">歳</span></div></div>
+    <div class="row"><label for="s_pen">65歳から受け取る場合の年額</label><div class="in"><input type="number" inputmode="decimal" id="s_pen" data-k="pen"><span class="unit">万円</span></div></div>
+    <p class="note" id="s_penAdj"></p>
     <h3>個人年金・その他の収入</h3>
     <div id="incList" class="items"></div>
     <div class="btns"><button class="small" id="addInc">収入を足す</button></div>
@@ -286,7 +287,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 
 <script>
 "use strict";
-const APP_VER = "1.4（オフライン版）";
+const APP_VER = "1.5（オフライン版）";
 const KEY = "shisan-v1";
 /* この端末だけで書き出す（共有シート→「ファイル」に保存、だめならダウンロード） */
 const LOCAL_DL = {save: async ({filename, data})=>{
@@ -442,8 +443,8 @@ function simulate(p){
   const addTotal = num(p.nisaAdd);
   const addMonths = (addTotal>0 && addEnd!==null && addEnd>=start) ? (addEnd-start+1) : 0;
   const addPer = addMonths ? addTotal/addMonths : 0;
-  const penStart = has(p.penAge) ? birth + num(p.penAge)*12 : Infinity;
-  const pen = num(p.pen)/12;
+  const penStart = has(p.penAge) ? birth + Math.round(Math.min(75, Math.max(60, num(p.penAge)))*12) : Infinity;
+  const pen = penAdjusted(p)/12;
   const exp1 = num(p.exp)/12;
   const exp2Start = (has(p.exp2Age) && has(p.exp2)) ? birth + num(p.exp2Age)*12 : Infinity;
   const exp2 = num(p.exp2)/12;
@@ -490,7 +491,25 @@ function simulate(p){
   return {birth, start, end, endAge, months, years, firstDraw, firstDrawFrom, depleted, shortfall, last};
 }
 
+function penRate(age){
+  const m = Math.round((Math.min(75, Math.max(60, num(age))) - 65) * 12);
+  if (m < 0) return 1 + 0.004*m;          // 繰り上げ：1か月0.4%減
+  if (m < 12) return 1;                    // 66歳前は繰り下げできない
+  return 1 + 0.007*m;                      // 繰り下げ：1か月0.7%増
+}
+function penAdjusted(p){ return has(p.penAge) ? num(p.pen) * penRate(p.penAge) : num(p.pen); }
+function renderPenAdj(){
+  const p = S.sim, el = $("#s_penAdj"); if (!el) return;
+  if (!has(p.penAge) || !has(p.pen)) { el.textContent = ""; return; }
+  const a = num(p.penAge), r = penRate(a), pct = Math.round((r-1)*1000)/10;
+  let t = `${a}歳から受け取ると年${Math.round(penAdjusted(p)*10)/10}万円`;
+  t += pct===0 ? "（増減なし）" : `（${pct>0?"+":""}${pct}%）`;
+  if (a < 60 || a > 75) t += "。60〜75歳の範囲で計算します";
+  else if (a > 65 && a < 66) t += "。66歳より前は繰り下げできないので65歳の額です";
+  el.textContent = t + "。繰り上げは1か月0.4%減、繰り下げは1か月0.7%増。";
+}
 function renderSim(){
+  renderPenAdj();
   { const c0=num(S.sim.cash), b0=(S.sim.bonds||[]).reduce((s,b)=>s+num(b.amt),0), n0=num(S.sim.nisa);
     $("#s_total").textContent = man(c0+b0+n0);
     $("#s_totalSub").textContent = `現金 ${man(c0)}・国債 ${man(b0)}・NISA ${man(n0)}（万円）`; }
@@ -837,7 +856,7 @@ function premiseRows(){
   for (const b of p.bonds||[]) if (num(b.amt)>0) rows.push([b.name||"国債", `${num(b.amt)}万円・税引後${num(b.rate)}%・満期${b.end||"なし"}`]);
   rows.push(["NISA", `${num(p.nisa)}万円・年${num(p.nisaRet)}%`]);
   if (num(p.nisaAdd)>0) rows.push(["NISAへ入れる額", `${num(p.nisaAdd)}万円（${p.nisaAddEnd||"?"}まで）`]);
-  rows.push(["公的年金", `${p.penAge}歳から年${num(p.pen)}万円`]);
+  rows.push(["公的年金", `${p.penAge}歳から年${Math.round(penAdjusted(p)*10)/10}万円（65歳からなら年${num(p.pen)}万円）`]);
   for (const x of p.incs||[]) if (num(x.amt)>0) rows.push([x.name||"収入", `年${num(x.amt)}万円・${x.from||"?"}〜${x.to||"?"}`]);
   rows.push(["年間の生活費", `${num(p.exp)}万円`]);
   if (has(p.exp2Age) && has(p.exp2)) rows.push(["生活費の変更", `${p.exp2Age}歳から${num(p.exp2)}万円`]);
