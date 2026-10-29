@@ -138,6 +138,11 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="row"><label for="s_nisaAdd">これから現金から入れる額</label><div class="in"><input type="number" inputmode="decimal" id="s_nisaAdd" data-k="nisaAdd"><span class="unit">万円</span></div></div>
     <div class="row"><label for="s_nisaAddEnd">入れ終わる月</label><div class="in"><input type="month" id="s_nisaAddEnd" data-k="nisaAddEnd"></div></div>
     <p class="note">入れる額は、始める月から入れ終わる月まで毎月均等に現金からNISAへ移します。</p>
+    <h3>NISA 第二弾</h3>
+    <div class="row"><label for="s_nisa2Start">入れ始める月</label><div class="in"><input type="month" id="s_nisa2Start" data-k="nisa2Start"></div></div>
+    <div class="row"><label for="s_nisa2Add">現金から入れる額</label><div class="in"><input type="number" inputmode="decimal" id="s_nisa2Add" data-k="nisa2Add"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_nisa2End">入れ終わる月</label><div class="in"><input type="month" id="s_nisa2End" data-k="nisa2End"></div></div>
+    <p class="note">第二弾は、入れ始める月から入れ終わる月まで毎月均等に現金からNISAへ移します（国債の償還金を入れる場合など）。</p>
     <div class="row" style="border-top:2px solid var(--line);border-bottom:0;margin-top:8px;padding-top:10px"><label style="font-weight:700">合計</label><div class="in"><span class="big" id="s_total">0</span><span class="unit">万円</span></div></div>
     <p class="note" id="s_totalSub"></p>
   </details>
@@ -287,7 +292,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 
 <script>
 "use strict";
-const APP_VER = "1.5（オフライン版）";
+const APP_VER = "1.6（オフライン版）";
 const KEY = "shisan-v1";
 /* この端末だけで書き出す（共有シート→「ファイル」に保存、だめならダウンロード） */
 const LOCAL_DL = {save: async ({filename, data})=>{
@@ -309,7 +314,7 @@ const DEF_SIM = {
   bonds:[
     {name:"", amt:"", rate:"", end:""}
   ],
-  nisa:"", nisaRet:"", nisaAdd:"", nisaAddEnd:"",
+  nisa:"", nisaRet:"", nisaAdd:"", nisaAddEnd:"", nisa2Start:"", nisa2Add:"", nisa2End:"",
   penAge:65, pen:"",
   incs:[
     {name:"", amt:"", from:"", to:""}
@@ -443,6 +448,9 @@ function simulate(p){
   const addTotal = num(p.nisaAdd);
   const addMonths = (addTotal>0 && addEnd!==null && addEnd>=start) ? (addEnd-start+1) : 0;
   const addPer = addMonths ? addTotal/addMonths : 0;
+  const add2S = ymToIdx(p.nisa2Start), add2E = ymToIdx(p.nisa2End), add2Total = num(p.nisa2Add);
+  const add2Months = (add2Total>0 && add2S!==null && add2E!==null && add2E>=add2S) ? (add2E-add2S+1) : 0;
+  const add2Per = add2Months ? add2Total/add2Months : 0;
   const penStart = has(p.penAge) ? birth + Math.round(Math.min(75, Math.max(60, num(p.penAge)))*12) : Infinity;
   const pen = penAdjusted(p)/12;
   const exp1 = num(p.exp)/12;
@@ -461,6 +469,7 @@ function simulate(p){
     for (const b of bonds) if (b.end!==null && i===b.end && b.amt>0){ cash += b.amt; b.amt = 0; }
     // NISAへ入れる
     if (addPer && i<=addEnd){ cash -= addPer; nisa += addPer; }
+    if (add2Per && i>=add2S && i<=add2E){ cash -= add2Per; nisa += add2Per; }
     // 収入
     if (i>=penStart) cash += pen;
     for (const x of incs) if ((x.from===null || i>=x.from) && (x.to===null || i<=x.to)) cash += x.m;
@@ -856,6 +865,7 @@ function premiseRows(){
   for (const b of p.bonds||[]) if (num(b.amt)>0) rows.push([b.name||"国債", `${num(b.amt)}万円・税引後${num(b.rate)}%・満期${b.end||"なし"}`]);
   rows.push(["NISA", `${num(p.nisa)}万円・年${num(p.nisaRet)}%`]);
   if (num(p.nisaAdd)>0) rows.push(["NISAへ入れる額", `${num(p.nisaAdd)}万円（${p.nisaAddEnd||"?"}まで）`]);
+  if (num(p.nisa2Add)>0) rows.push(["NISA第二弾", `${num(p.nisa2Add)}万円（${p.nisa2Start||"?"}〜${p.nisa2End||"?"}）`]);
   rows.push(["公的年金", `${p.penAge}歳から年${Math.round(penAdjusted(p)*10)/10}万円（65歳からなら年${num(p.pen)}万円）`]);
   for (const x of p.incs||[]) if (num(x.amt)>0) rows.push([x.name||"収入", `年${num(x.amt)}万円・${x.from||"?"}〜${x.to||"?"}`]);
   rows.push(["年間の生活費", `${num(p.exp)}万円`]);
