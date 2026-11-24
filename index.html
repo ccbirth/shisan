@@ -103,6 +103,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 .recs .rec .d{color:var(--sub);font-size:14px}
 .chart-tip{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--field);border:1px solid var(--line);font-size:15px;line-height:1.5}
 .chart-tip b{font-size:16px}
+.pill{display:inline-block;font-size:13px;padding:2px 8px;border-radius:999px;background:var(--field);border:1px solid var(--line);color:var(--sub);margin-left:6px;vertical-align:middle}
 </style>
 <header>
   <h1>資産の見通し</h1>
@@ -136,12 +137,16 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="btns"><button class="small" id="addBond">国債を足す</button></div>
     <p class="note">購入月が空欄（または始める月より前）なら、始める月の初めに持っている国債です（額は始める月の時点の額。外国債券は円に直した額）。購入月が始める月（その月を含む）以降なら、その月に現金から額が出て、翌月から利子が入ります。利率は税引後。満期の月に額が現金に戻ります。満期が空欄なら試算の終わりまで持ちます。</p>
     <h3>NISA</h3>
-    <div class="row"><label for="s_nisa">評価額</label><div class="in"><input type="number" inputmode="decimal" id="s_nisa" data-k="nisa"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_nisa">評価額（現在の元本・評価額）</label><div class="in"><input type="number" inputmode="decimal" id="s_nisa" data-k="nisa"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="s_nisaUsed">うち新NISAの既使用元本（任意）</label><div class="in"><input type="number" inputmode="decimal" id="s_nisaUsed" data-k="nisaUsed"><span class="unit">万円</span></div></div>
     <div class="row"><label for="s_nisaRet">想定利回り（年）</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="s_nisaRet" data-k="nisaRet"><span class="unit">%</span></div></div>
+    <div class="row"><label for="s_nisaCap">生涯投資枠の上限キャップ</label><div class="in"><input type="number" inputmode="decimal" id="s_nisaCap" data-k="nisaCap"><span class="unit">万円</span></div></div>
+    <p class="note">新NISAの生涯投資枠（1,800万円）に達した時点で、以降の払い込みを自動停止します（空欄または0なら上限なしで計算）。既使用元本が空欄なら「評価額」を初期元本として数えます。</p>
     <h3>NISAへの払い込み（現金から）</h3>
     <div id="nisaPayList" class="items"></div>
     <div class="btns"><button class="small" id="addNisaPay">払い込みを足す</button></div>
-    <p class="note">総額を、払い込み始める月から払込完了月まで毎月均等に現金からNISAへ移します。始める月が空欄なら、試算を始める月からです。つみたて枠・成長枠・国債の償還金を入れる第二弾など、口ごとに足してください。払い込み始める月が試算の始める月より前なら、総額を全期間で割った月額で払い込み、始める月より前の分は払込済みとして数えません。</p>
+    <p class="note" id="nisaPaySummary"></p>
+    <p class="note">総額を、払い込み始める月から払込完了月まで毎月均等に現金からNISAへ移します。始める月が空欄なら、試算を始める月からです。つみたて枠・成長枠・国債の償還金を入れる第二弾など、口ごとに足してください。</p>
     <div class="row" style="border-top:2px solid var(--line);border-bottom:0;margin-top:8px;padding-top:10px"><label style="font-weight:700">合計</label><div class="in"><span class="big" id="s_total">0</span><span class="unit">万円</span></div></div>
     <p class="note" id="s_totalSub"></p>
   </details>
@@ -198,9 +203,11 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="row"><label for="r_job">その月のバイト代</label><div class="in"><input type="number" inputmode="decimal" id="r_job"><span class="unit">万円</span></div></div>
     <div class="row"><label for="r_tip">投げ銭（受け取った額）</label><div class="in"><input type="number" inputmode="decimal" id="r_tip"><span class="unit">万円</span></div></div>
     <div class="row"><label for="r_fee">投げ銭の手数料など</label><div class="in"><input type="number" inputmode="decimal" id="r_fee"><span class="unit">万円</span></div></div>
-    <div class="row"><label for="r_inc">ほかに入ったお金</label><div class="in"><input type="number" inputmode="decimal" id="r_inc"><span class="unit">万円</span></div></div>
-    <div class="row"><label for="r_tr">投資に回した額（振替）</label><div class="in"><input type="number" inputmode="decimal" id="r_tr"><span class="unit">万円</span></div></div>
-    <p class="note">ほかに入ったお金は、年金・国債の利子や償還・NISAからの取り崩しなど、生活費以外で口座に入った額。投資に回した額は、この口座からNISAの買い付けや国債の購入に回した額。使った額＝前の月の残高＋バイト代＋投げ銭（手数料を引いた額）＋ほかに入ったお金－投資に回した額－今月の残高で出します。投げ銭は、手数料が引かれる前の額と、引かれた手数料を分けて入れます。</p>
+    <div class="row"><label for="r_inc">ほかに入ったお金（年金・退職金・償還など）</label><div class="in"><input type="number" inputmode="decimal" id="r_inc"><span class="unit">万円</span></div></div>
+    <div class="row"><label for="r_tr">投資に回した額（NISA・国債購入など）</label><div class="in"><input type="number" inputmode="decimal" id="r_tr"><span class="unit">万円</span></div></div>
+    <p class="note"><strong>【移行期・退職金入金時の記録ルール】</strong><br>
+    ・退職金や国債償還が口座に入った月 →「ほかに入ったお金」に入れます（生活費の使いすぎと誤認されません）。<br>
+    ・この口座からNISA積立や国債購入へ資金を移した月 →「投資に回した額」に入れます（「これから投資に回す額」の残り枠からも自動で差し引かれます）。</p>
     <div class="btns"><button class="primary" id="r_add">記録する</button></div>
   </div>
 
@@ -219,8 +226,8 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="row"><label for="m_start">始める月</label><div class="in"><input type="month" id="m_start" data-m="start"></div></div>
     <div class="row"><label for="m_bal">始める月の初めの残高</label><div class="in"><input type="number" inputmode="decimal" id="m_bal" data-m="bal"><span class="unit">万円</span></div></div>
     <div class="row"><label for="m_inv">そのうち、これから投資に回す額</label><div class="in"><input type="number" inputmode="decimal" id="m_inv" data-m="inv"><span class="unit">万円</span></div></div>
-    <div class="btns"><button class="small" id="m_invFromSim">試算の額を反映</button></div>
-    <p class="note" id="m_invNote">試算の「NISAへの払い込み」のうち、試算を始める月から払い込む口（払い込み始める月が空欄か始める月以前の口）の総額の合計を入れます。見張りの始める月が試算より後なら、それまでに移した分を引き、見張る口座から国債を買う予定があれば足してください。生活に使える残高は「銀行の残高－まだ投資に回していない額」で出します。</p>
+    <div class="btns"><button class="small" id="m_invFromSim">試算の投資予定額を反映</button></div>
+    <p class="note" id="m_invNote">試算の「NISAへの払い込み」および「試算開始月以降に買う国債」の合計を自動計算して反映できます。生活に使える残高は「銀行の残高－まだ投資に回していない額」で算出します。</p>
     <div class="row"><label for="m_end">この残高で持たせる月</label><div class="in"><input type="month" id="m_end" data-m="end"></div></div>
     <div class="row"><label for="m_keep">持たせる月に残しておく額</label><div class="in"><input type="number" inputmode="decimal" id="m_keep" data-m="keep"><span class="unit">万円</span></div></div>
     <p class="note">始める月から持たせる月まで、生活に使える残高から「残しておく額」と下の「特別出費（税金・保険料など）」を引いた分を均等に使う前提で、毎月使える額を出します。</p>
@@ -230,6 +237,11 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="btns"><button class="small" id="addMonEvt">特別出費を足す</button></div>
     <p class="note">退職翌年の住民税や国保料など、毎月の生活費予算とは別枠で確保したい出費を登録します。登録した額の合計はあらかじめ生活に使える残高から差し引いて月予算を割り出し、指定した月の計画線（点線）に反映します。</p>
 
+    <h3>口座別残高メモ（ペイオフ確認用・任意）</h3>
+    <div id="monAccList" class="items"></div>
+    <div class="btns"><button class="small" id="addMonAcc">口座メモを足す</button></div>
+    <p class="note">もみじ銀行・じぶん銀行・MUFG証券などの残高をメモできます。銀行口座が1,000万円を超えている場合はペイオフ注意表示が出ます。</p>
+
     <h3>予算とバイト</h3>
     <div class="row"><label for="m_budget">月の予算（空欄なら上の割り算）</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_budget" data-m="budget"><span class="unit">万円</span></div></div>
     <div class="row"><label for="m_shift">バイト1回の稼ぎ</label><div class="in"><input type="number" inputmode="decimal" step="0.01" id="m_shift" data-m="shift"><span class="unit">万円</span></div></div>
@@ -238,7 +250,6 @@ nav.bar button.on{color:var(--accent);font-weight:700}
     <div class="row"><label for="m_shotoku">所得税の確定申告が要る所得</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_shotoku" data-m="shotoku"><span class="unit">万円超</span></div></div>
     <div class="row"><label for="m_jumin">住民税が非課税になる所得</label><div class="in"><input type="number" inputmode="decimal" step="0.1" id="m_jumin" data-m="jumin"><span class="unit">万円以下</span></div></div>
     <p class="note">初期値は2026年分の所得税（給与所得控除74万円・基礎控除104万円）と、住民税の非課税基準の一例（45万円）です。住民税の基準は住んでいる市区町村で確かめて入れ直してください。</p>
-    <p class="note">予算を超えて使った分を「はみ出し」とし、バイト代で埋めた残りを、バイト1回の稼ぎで割って「あと何回」で出します。たとえば4時間・時給1,200円なら0.48万円です。</p>
   </details>
 </section>
 
@@ -299,7 +310,7 @@ nav.bar button.on{color:var(--accent);font-weight:700}
 
 <script>
 "use strict";
-const APP_VER = "1.9（オフライン版）";
+const APP_VER = "2.0（オフライン版）";
 const KEY = "shisan-v1";
 /* この端末だけで書き出す（共有シート→「ファイル」に保存、だめならダウンロード） */
 const LOCAL_DL = {save: async ({filename, data})=>{
@@ -321,7 +332,7 @@ const DEF_SIM = {
   bonds:[
     {name:"", amt:"", rate:"", buy:"", end:""}
   ],
-  nisa:"", nisaRet:"",
+  nisa:"", nisaUsed:"", nisaRet:"", nisaCap:1800,
   nisaPays:[
     {name:"", amt:"", from:"", to:""}
   ],
@@ -331,7 +342,7 @@ const DEF_SIM = {
   ],
   exp:"", exp2Age:"", exp2:"", infl:0, bondFirst:false, cashFloor:""
 };
-const DEF_MON = {inv:"", keep:"", start:"", bal:"", end:"", budget:"", shift:"", kyuyo:74, shotoku:104, jumin:45, evts:[]};
+const DEF_MON = {inv:"", keep:"", start:"", bal:"", end:"", budget:"", shift:"", kyuyo:74, shotoku:104, jumin:45, evts:[], accs:[]};
 
 /* ---------- 保存 ---------- */
 let S = load();
@@ -359,6 +370,7 @@ function fixMon(mon){
   const b = clone(DEF_MON);
   const out = {...b, ...(mon||{})};
   if (!Array.isArray(out.evts)) out.evts = [];
+  if (!Array.isArray(out.accs)) out.accs = [];
   return out;
 }
 function load(){
@@ -406,7 +418,7 @@ function setSaveState(kind, e){
 function fromData(d){
   d = clone(d || {});
   return {sim:fixSim(d.sim||{}), mon:fixMon(d.mon||{}),
-    recs:Array.isArray(d.recs)?d.recs.slice():[], lastExport:d.lastExport||null, ver:1};
+    recs:Array.isArray(d.recs)?d.recs.slice():[], lastExport:d.lastExport||null, ver:2};
 }
 async function connect(){
   const c = window.claude;
@@ -450,7 +462,7 @@ function man(v, d=0){
 }
 function ageStr(months){ const y=Math.floor(months/12), m=months%12; return m ? `${y}歳${m}か月` : `${y}歳`; }
 function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
-function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),1800); }
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("on"),2200); }
 
 /* ---------- 表示モード（名目 / 実質） ---------- */
 const SV_KEY = "shisan-sim-val";
@@ -470,6 +482,9 @@ function simulate(p){
   let cash = num(p.cash), nisa = num(p.nisa);
   const nisaR = Math.pow(1+num(p.nisaRet)/100, 1/12) - 1;
   const cashFloor = Math.max(0, num(p.cashFloor));
+  const nisaCap = Math.max(0, num(p.nisaCap));
+  let nisaPrincipal = has(p.nisaUsed) ? Math.max(0, num(p.nisaUsed)) : Math.max(0, num(p.nisa));
+
   const warns = [];
   const bonds = [];
   for (const b of (p.bonds||[])){
@@ -477,7 +492,7 @@ function simulate(p){
     const buy = ymToIdx(b.buy), endI = ymToIdx(b.end);
     const held = !(buy!==null && buy>=start);
     if (!held && endI!==null && endI<=buy){ warns.push(`国債「${b.name||"名前なし"}」は満期が購入月以前なので、試算に入れていません。`); continue; }
-    bonds.push({amt, r:num(b.rate)/100, buy, end:endI, on:held});
+    bonds.push({name:b.name||"国債", initAmt:amt, amt, drewTotal:0, r:num(b.rate)/100, buy, end:endI, on:held});
   }
   const bondSum = () => bonds.reduce((s,b)=>s+(b.on?b.amt:0),0);
   const incs = (p.incs||[]).map(x=>({m:num(x.amt)/12, from:ymToIdx(x.from), to:ymToIdx(x.to)})).filter(x=>x.m>0);
@@ -497,7 +512,7 @@ function simulate(p){
   const inflM = Math.pow(1+num(p.infl)/100, 1/12);
 
   const months = [], years = [];
-  let firstDraw = null, firstDrawFrom = null, depleted = null, shortfall = 0, skippedPays = 0;
+  let firstDraw = null, firstDrawFrom = null, depleted = null, shortfall = 0, skippedPays = 0, cappedPays = 0, capReachedYm = null;
   let yr = null;
   for (let i=start; i<end; i++){
     const disc = Math.pow(inflM, i-start);
@@ -509,10 +524,23 @@ function simulate(p){
     for (const x of incs) if ((x.from===null || i>=x.from) && (x.to===null || i<=x.to)) cash += x.m;
     const base = i>=exp2Start ? exp2 : exp1;
     cash -= base * disc;
+    // NISAへ入れる（現金防衛ライン＋生涯投資枠上限キャップ制御）
     for (const x of pays){
       if (i>=x.s && i<=x.e){
-        if (cashFloor > 0 && (cash - x.per) < cashFloor){ skippedPays += x.per; }
-        else { cash -= x.per; nisa += x.per; }
+        let add = x.per;
+        if (nisaCap > 0){
+          const room = Math.max(0, nisaCap - nisaPrincipal);
+          if (room <= 1e-6){ cappedPays += add; continue; }
+          if (add > room){ cappedPays += (add - room); add = room; }
+        }
+        if (cashFloor > 0 && (cash - add) < cashFloor){
+          skippedPays += add;
+        } else {
+          cash -= add;
+          nisa += add;
+          nisaPrincipal += add;
+          if (nisaCap > 0 && nisaPrincipal >= nisaCap - 1e-6 && capReachedYm === null) capReachedYm = i;
+        }
       }
     }
     let drew = 0;
@@ -522,7 +550,13 @@ function simulate(p){
         if (cash >= 0) break;
         const need = -cash;
         if (src==="nisa" && nisa>0){ const t=Math.min(nisa,need); nisa-=t; cash+=t; drew+=t; if(firstDraw===null){firstDraw=i; firstDrawFrom="NISA";} }
-        if (src==="bond") for (const b of bonds){ if (cash>=0) break; if (b.amt<=0 || !b.on) continue; const t=Math.min(b.amt,-cash); b.amt-=t; cash+=t; drew+=t; if(firstDraw===null){firstDraw=i; firstDrawFrom="国債";} }
+        if (src==="bond") for (const b of bonds){
+          if (cash>=0) break;
+          if (b.amt<=0 || !b.on) continue;
+          const t=Math.min(b.amt,-cash);
+          b.amt-=t; b.drewTotal+=t; cash+=t; drew+=t;
+          if(firstDraw===null){firstDraw=i; firstDrawFrom=`国債（${b.name}）`;}
+        }
       }
       if (cash < -1e-9 && depleted===null) depleted = i;
       if (cash < 0){ shortfall += -cash; cash = 0; }
@@ -537,7 +571,8 @@ function simulate(p){
     Object.assign(yr, {cash, bond, nisa, rCash, rBond, rNisa, age: Math.floor((i-birth)/12)});
   }
   const last = months[months.length-1];
-  return {birth, start, end, endAge, months, years, firstDraw, firstDrawFrom, depleted, shortfall, skippedPays, last, warns};
+  const drewBonds = bonds.filter(b=>b.drewTotal > 0.05);
+  return {birth, start, end, endAge, months, years, firstDraw, firstDrawFrom, depleted, shortfall, skippedPays, cappedPays, capReachedYm, nisaPrincipal, nisaCap, drewBonds, last, warns};
 }
 
 function penRate(age){
@@ -576,6 +611,21 @@ function renderSim(){
   { const c0=num(S.sim.cash), b0=bondsAtStart(), n0=num(S.sim.nisa);
     $("#s_total").textContent = man(c0+b0+n0);
     $("#s_totalSub").textContent = `現金 ${man(c0)}・国債 ${man(b0)}・NISA ${man(n0)}（万円）`; }
+  // NISA払い込み予定サマリー
+  {
+    const paySumEl = $("#nisaPaySummary");
+    if (paySumEl){
+      const used0 = has(S.sim.nisaUsed) ? num(S.sim.nisaUsed) : num(S.sim.nisa);
+      const planTotal = (S.sim.nisaPays||[]).reduce((s,x)=>s+num(x.amt), 0);
+      const cap = num(S.sim.nisaCap);
+      if (cap > 0){
+        const rem = Math.max(0, cap - used0);
+        paySumEl.innerHTML = `現在の既使用元本 <b>${man(used0,1)}万円</b> ／ 残りNISA枠 <b>${man(rem,1)}万円</b>（登録中の払い込み合計 ${man(planTotal,1)}万円）`;
+      } else {
+        paySumEl.textContent = planTotal > 0 ? `登録中の払い込み合計：${man(planTotal,1)}万円` : "";
+      }
+    }
+  }
   const r = simulate(S.sim);
   const box = $("#simResult");
   if (r.err){ box.innerHTML = `<p class="ng">${esc(r.err)}</p>`; $("#simChart").innerHTML=""; $("#simTable").innerHTML=""; return; }
@@ -587,7 +637,7 @@ function renderSim(){
     html += `<div><p class="note">下の「始める月の資産」に金額を入れると、結果が出ます。</p></div>`;
   } else {
     if (r.firstDraw!==null){
-      html += `<div><div class="k">現金が尽きて取り崩しが始まる</div><div class="big">${ageStr(r.firstDraw-r.birth)}</div><div>${jYm(r.firstDraw)}・${r.firstDrawFrom}から</div></div>`;
+      html += `<div><div class="k">現金が尽きて取り崩しが始まる</div><div class="big">${ageStr(r.firstDraw-r.birth)}</div><div>${jYm(r.firstDraw)}・${esc(r.firstDrawFrom)}から</div></div>`;
     } else if (r.depleted!==null){
       html += `<div><div class="k">現金が尽きる</div><div class="big ng">${ageStr(r.depleted-r.birth)}</div><div>${jYm(r.depleted)}。取り崩せる国債・NISAはありません</div></div>`;
     } else {
@@ -598,6 +648,13 @@ function renderSim(){
     } else if (r.depleted===null){
       const c = mVal(r.last,"cash"), b = mVal(r.last,"bond"), n = mVal(r.last,"nisa"), t = c+b+n;
       html += `<div><div class="k">${r.endAge}歳になる時点で残る資産${valTag}</div><div class="big ok">${man(t)}万円</div><div>現金 ${man(c)}・国債 ${man(b)}・NISA ${man(n)}</div></div>`;
+    }
+    if (r.drewBonds && r.drewBonds.length){
+      const bText = r.drewBonds.map(b=>`${esc(b.name)}：${man(b.drewTotal,1)}万円`).join(" ／ ");
+      html += `<div><div class="k">中途取り崩しした国債の内訳</div><div>${bText}</div></div>`;
+    }
+    if (r.capReachedYm !== null){
+      html += `<div><p class="note ok">※<b>${jYm(r.capReachedYm)}（${ageStr(r.capReachedYm-r.birth)}）</b>にNISA生涯上限（${man(r.nisaCap)}万円）へ到達し、以降の積立を自動停止しました。</p></div>`;
     }
     if (r.skippedPays > 0.1){
       html += `<div><p class="note">※現金防衛ラインにより、合計 <b>${man(r.skippedPays,1)}万円</b> 分のNISA積立をスキップしました。</p></div>`;
@@ -730,6 +787,29 @@ function renderMon(){
   h += m.usingBudget
     ? `<div><div class="k">月の予算</div><div class="big">${man(m.plan,1)}万円</div><div>残高を${jYm(m.en)}まで均等に割ると ${man(m.even,1)}万円${subNote?`（${subNote}前提）`:""}</div></div>`
     : `<div><div class="k">計画で毎月使える額（${jYm(m.st)}〜${jYm(m.en)}・${m.span}か月）</div><div class="big">${man(m.plan,1)}万円</div>${subNote?`<div>${subNote}前提</div>`:""}</div>`;
+
+  // 特別出費の残り予定（独立表示）
+  if (m.evtTotal > 0){
+    const lastI = m.rows.length ? m.rows[m.rows.length-1].i : (m.st - 1);
+    const remEvts = m.evts.filter(e=>e.i>lastI);
+    const remSum = remEvts.reduce((s,e)=>s+e.amt, 0);
+    const nextEvt = remEvts.slice().sort((a,b)=>a.i-b.i)[0];
+    h += `<div><div class="k">これから控えている特別出費（税金・保険料など）</div><div class="big">${man(remSum,1)}万円 <span class="pill">全期間合計 ${man(m.evtTotal,1)}万円</span></div>`
+      + (nextEvt ? `<div>次回予定：${jYm(nextEvt.i)}「${esc(nextEvt.name)}」${man(nextEvt.amt,1)}万円</div>` : `<div class="ok">登録された特別出費はすべて通過済みです</div>`)
+      + `</div>`;
+  }
+
+  // 口座別残高＆ペイオフチェック
+  const accs = (S.mon.accs||[]).filter(a=>a.name || num(a.amt)>0);
+  if (accs.length){
+    const accSum = accs.reduce((s,a)=>s+num(a.amt), 0);
+    const overBanks = accs.filter(a=>a.isBank && num(a.amt) > 1000);
+    h += `<div><div class="k">口座メモ合計（${accs.length}口座）</div><div class="big">${man(accSum,1)}万円</div>`
+      + `<div>${accs.map(a=>`${esc(a.name||"口座")} ${man(num(a.amt),1)}万`).join(" ／ ")}</div>`
+      + (overBanks.length ? `<div class="ng">※ペイオフ注意（1,000万円超の銀行）：${overBanks.map(a=>`${esc(a.name||"銀行")}(${man(num(a.amt),1)}万)`).join("・")}</div>` : "")
+      + `</div>`;
+  }
+
   if (m.rows.length){
     const last = m.rows[m.rows.length-1], y = Math.floor(last.i/12);
     const yr = m.rows.filter(r=>Math.floor(r.i/12)===y);
@@ -863,7 +943,7 @@ function renderRecs(m){
   }).join("");
 }
 
-/* ---------- 国債・収入・特別出費の一覧 ---------- */
+/* ---------- 国債・収入・特別出費・口座メモの一覧 ---------- */
 const LISTS = {
   bonds:{root:"sim", box:"#bondList", blank:{name:"", amt:"", rate:"", buy:"", end:""}, fields:[
     ["amt","額","number","万円"],["rate","利率（年・税引後）","number","%"],["buy","購入月（空欄＝持っている）","month",""],["end","満期（償還）","month",""]]},
@@ -872,16 +952,19 @@ const LISTS = {
   incs:{root:"sim", box:"#incList", blank:{name:"", amt:"", from:"", to:""}, fields:[
     ["amt","年額","number","万円"],["from","受け取り始める月","month",""],["to","終わる月","month",""]]},
   evts:{root:"mon", box:"#monEvtList", blank:{name:"", amt:"", ym:""}, fields:[
-    ["amt","額","number","万円"],["ym","支払う月","month",""]]}
+    ["amt","額","number","万円"],["ym","支払う月","month",""]]},
+  accs:{root:"mon", box:"#monAccList", blank:{name:"", amt:"", isBank:true}, fields:[
+    ["amt","残高","number","万円"],["isBank","銀行口座（1,000万超チェック）","checkbox",""]]}
 };
 function renderList(key){
   const L = LISTS[key], arr = S[L.root][key] || (S[L.root][key]=[]);
   $(L.box).innerHTML = arr.map((it,i)=>{
     const rows = L.fields.map(([f,label,type,unit])=>{
       const id = `${key}_${i}_${f}`;
-      const inp = type==="month"
-        ? `<input type="month" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" value="${esc(it[f]??"")}">`
-        : `<input type="number" inputmode="decimal" step="0.01" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" value="${esc(it[f]??"")}">`;
+      let inp = "";
+      if (type==="month") inp = `<input type="month" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" value="${esc(it[f]??"")}">`;
+      else if (type==="checkbox") inp = `<input type="checkbox" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" ${it[f]?"checked":""}>`;
+      else inp = `<input type="number" inputmode="decimal" step="0.01" id="${id}" data-list="${key}" data-i="${i}" data-f="${f}" value="${esc(it[f]??"")}">`;
       return `<div class="row"><label for="${id}">${label}</label><div class="in">${inp}${unit?`<span class="unit">${unit}</span>`:""}</div></div>`;
     }).join("");
     const extra = key==="bonds" ? `<div class="btns"><button class="small" data-five="${i}">満期を購入月の5年後にする</button></div>` : "";
@@ -892,10 +975,11 @@ function onListInput(e){
   const el = e.target; const key = el.dataset && el.dataset.list; if (!key) return;
   const L = LISTS[key];
   const it = S[L.root][key][+el.dataset.i]; if (!it) return;
-  it[el.dataset.f] = el.value; save();
+  it[el.dataset.f] = el.type==="checkbox" ? el.checked : el.value;
+  save();
   if (L.root==="sim") renderSim(); else renderMon();
 }
-["#bondList","#incList","#nisaPayList","#monEvtList"].forEach(sel=>{
+["#bondList","#incList","#nisaPayList","#monEvtList","#monAccList"].forEach(sel=>{
   const box = $(sel);
   box.addEventListener("input", onListInput); box.addEventListener("change", onListInput);
   box.addEventListener("click", e=>{
@@ -914,6 +998,7 @@ $("#addBond").addEventListener("click", ()=>{ S.sim.bonds.push(clone(LISTS.bonds
 $("#addNisaPay").addEventListener("click", ()=>{ S.sim.nisaPays.push(clone(LISTS.nisaPays.blank)); save(); renderList("nisaPays"); });
 $("#addInc").addEventListener("click", ()=>{ S.sim.incs.push(clone(LISTS.incs.blank)); save(); renderList("incs"); });
 $("#addMonEvt").addEventListener("click", ()=>{ S.mon.evts.push(clone(LISTS.evts.blank)); save(); renderList("evts"); });
+$("#addMonAcc").addEventListener("click", ()=>{ S.mon.accs.push(clone(LISTS.accs.blank)); save(); renderList("accs"); });
 
 /* ---------- 入力の結びつけ ---------- */
 function bindForm(){
@@ -949,9 +1034,12 @@ $("#r_add").addEventListener("click", ()=>{
 });
 $("#m_invFromSim").addEventListener("click", ()=>{
   const st = ymToIdx(S.sim.start);
-  const v = (S.sim.nisaPays||[]).reduce((t,x)=>{ const f = ymToIdx(x.from); return t + ((f===null || (st!==null && f<=st)) ? num(x.amt) : 0); }, 0);
-  if (!(v>0)){ toast("試算の「NISAへの払い込み」に、始める月から払い込む口がありません"); return; }
-  S.mon.inv = String(v); $("#m_inv").value = S.mon.inv; save(); renderMon(); toast(`${man(v,1)}万円を反映しました`);
+  const vNisa = (S.sim.nisaPays||[]).reduce((t,x)=>{ const f = ymToIdx(x.from); return t + ((f===null || (st!==null && f<=st)) ? num(x.amt) : 0); }, 0);
+  const vBond = (S.sim.bonds||[]).reduce((t,b)=>{ const bi = ymToIdx(b.buy); return t + ((bi!==null && st!==null && bi>=st) ? num(b.amt) : 0); }, 0);
+  const v = vNisa + vBond;
+  if (!(v>0)){ toast("試算に反映できる投資予定額（NISA払い込み・新規国債購入）がありません"); return; }
+  S.mon.inv = String(v); $("#m_inv").value = S.mon.inv; save(); renderMon();
+  toast(`NISA ${man(vNisa,1)}万＋国債 ${man(vBond,1)}万＝${man(v,1)}万円を反映しました`);
 });
 $("#recList").addEventListener("click", e=>{
   const btn = e.target.closest("button[data-del]"); if (!btn) return;
@@ -986,6 +1074,7 @@ function premiseRows(){
   rows.push(["生まれた年月", p.birth], ["試算を始める月", p.start], ["試算の終わり", `${p.endAge}歳`], ["現金", `${num(p.cash)}万円`]);
   for (const b of p.bonds||[]) if (num(b.amt)>0) rows.push([b.name||"国債", `${num(b.amt)}万円・税引後${num(b.rate)}%・購入${b.buy||"済み"}・満期${b.end||"なし"}`]);
   rows.push(["NISA", `${num(p.nisa)}万円・年${num(p.nisaRet)}%`]);
+  if (num(p.nisaCap)>0) rows.push(["NISA生涯投資枠キャップ", `${num(p.nisaCap)}万円`]);
   for (const x of p.nisaPays||[]) if (num(x.amt)>0) rows.push([x.name||"NISAへの払い込み", `${num(x.amt)}万円（${x.from||"始める月"}〜${x.to||"?"}）`]);
   rows.push(["公的年金", `${p.penAge}歳から年${Math.round(penAdjusted(p)*10)/10}万円（65歳からなら年${num(p.pen)}万円）`]);
   for (const x of p.incs||[]) if (num(x.amt)>0) rows.push([x.name||"収入", `年${num(x.amt)}万円・${x.from||"?"}〜${x.to||"?"}`]);
@@ -1071,7 +1160,7 @@ function pdfPages(r){
   y+=50; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("結果", M, y);
   for (const [k,v] of summaryRows(r)){ y+=46; g.fillStyle=C.sub; g.font=`24px ${font}`; g.fillText(k, M, y); y+=40; g.fillStyle=C.ink; g.font=`bold 32px ${font}`; g.fillText(v, M, y); }
   y+=60; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("資産の推移", M, y);
-  const top=y+30, ch=520, L=M+90, R=W-M, B=top+ch;
+  const top=y+30, ch=500, L=M+90, R=W-M, B=top+ch;
   const ms=r.months, maxV=niceMax(Math.max(...ms.map(m=>mVal(m,"cash")+mVal(m,"bond")+mVal(m,"nisa"))));
   const X=i=>L+(i-r.start)/Math.max(1,r.end-1-r.start)*(R-L), Y=v=>top+(1-v/maxV)*(ch-40);
   g.font=`22px ${font}`; g.textAlign="right";
@@ -1085,9 +1174,9 @@ function pdfPages(r){
   g.textAlign="left"; let lx=M; const ly=B+50; g.font=`24px ${font}`;
   for (const [t,col] of [["現金",C.cash],["国債",C.bond],["NISA",C.nisa]]){ g.fillStyle=col; g.fillRect(lx,ly-20,22,22); g.fillStyle=C.sub; g.fillText(t,lx+32,ly); lx+=150; }
   g.fillStyle=C.sub; g.fillText("縦軸は万円", R-140, ly);
-  y=ly+70; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("前提", M, y);
+  y=ly+75; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText("前提", M, y);
   g.font=`22px ${font}`;
-  for (const [k,v] of premiseRows()){ y+=34; if (y>H-M){ g=newPage(); y=M+30; g.font=`22px ${font}`; } g.fillStyle=C.sub; g.fillText(k, M, y); g.fillStyle=C.ink; g.fillText(v, M+330, y); }
+  for (const [k,v] of premiseRows()){ y+=36; if (y>H-M){ g=newPage(); y=M+30; g.font=`22px ${font}`; } g.fillStyle=C.sub; g.fillText(k, M, y); g.fillStyle=C.ink; g.fillText(v, M+330, y); }
   g=newPage(); y=M+30; g.fillStyle=C.ink; g.font=`bold 34px ${font}`; g.fillText(`年ごとの残高（年末・万円・${SV==="real"?"実質":"名目"}）`, M, y);
   const cols=[M, M+110, M+230, M+390, M+550, M+710, M+870], head=["年","年齢","現金","国債","NISA","合計","取り崩し"];
   const rowH=Math.min(34, Math.floor((H-M-(y+50))/(r.years.length+1)));
@@ -1136,7 +1225,7 @@ function today(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getM
 $("#d_exp").addEventListener("click", async ()=>{
   if (!DL){ toast("この画面では書き出せません"); return; }
   const t = today();
-  const data = JSON.stringify({app:"shisan", ver:1, exported:t, sim:S.sim, mon:S.mon, recs:S.recs}, null, 2);
+  const data = JSON.stringify({app:"shisan", ver:2, exported:t, sim:S.sim, mon:S.mon, recs:S.recs}, null, 2);
   try {
     await DL.save({filename:`資産の見通し_${t}.json`, data});
     S.lastExport = t; save(); renderData(); toast("書き出しました");
@@ -1172,7 +1261,7 @@ function tState(t){ const el=$("#t_state"); el.textContent=t; el.hidden=!t; }
 let T_PENDING = null;
 $("#t_out").addEventListener("click", ()=>{
   const t = today();
-  $("#t_box").value = JSON.stringify({app:"shisan", ver:1, exported:t, sim:S.sim, mon:S.mon, recs:S.recs});
+  $("#t_box").value = JSON.stringify({app:"shisan", ver:2, exported:t, sim:S.sim, mon:S.mon, recs:S.recs});
   S.lastExport = t; save(); renderData();
   T_PENDING = null; $("#t_confirm").hidden = true;
   tState("中身を出しました。「コピー」を押すか、欄を長押しして全部選んでコピーしてください。");
@@ -1209,15 +1298,27 @@ function bindValues(){
   document.querySelectorAll("[data-k]").forEach(el=>{ const k=el.dataset.k; if (el.type==="checkbox") el.checked=!!S.sim[k]; else el.value=S.sim[k]??""; });
   document.querySelectorAll("[data-m]").forEach(el=>{ el.value = S.mon[el.dataset.m] ?? ""; });
   $("#r_ym").value = defaultRecYm();
-  renderList("bonds"); renderList("incs"); renderList("nisaPays"); renderList("evts");
+  renderList("bonds"); renderList("incs"); renderList("nisaPays"); renderList("evts"); renderList("accs");
 }
 function renderAll(){ renderSim(); renderMon(); renderData(); }
 
 /* ---------- 起動 ---------- */
-bindForm(); $("#r_ym").value = defaultRecYm(); renderList("bonds"); renderList("incs"); renderList("nisaPays"); renderList("evts"); renderAll();
+bindForm(); $("#r_ym").value = defaultRecYm(); renderList("bonds"); renderList("incs"); renderList("nisaPays"); renderList("evts"); renderList("accs"); renderAll();
 connect();
 if ("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost")){
-  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) {
+            toast("新しい版(v2.0)が用意されました。再起動で反映します");
+          }
+        });
+      });
+    }).catch(()=>{});
+  });
 }
 </script>
 
